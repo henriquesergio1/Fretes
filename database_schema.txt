@@ -1,0 +1,150 @@
+-- =================================================================================
+-- ESQUEMA DO BANCO DE DADOS PARA O SISTEMA DE GESTÃO DE FRETES
+-- Dialeto: Transact-SQL (T-SQL) para Microsoft SQL Server
+-- =================================================================================
+
+-- ---------------------------------------------------------------------------------
+-- Tabela: Veiculos
+-- Armazena informações sobre a frota de veículos.
+-- ---------------------------------------------------------------------------------
+CREATE TABLE Veiculos (
+    ID_Veiculo INT IDENTITY(1,1) PRIMARY KEY,
+    COD_Veiculo NVARCHAR(50) NOT NULL UNIQUE,
+    Placa NVARCHAR(20) NOT NULL,
+    TipoVeiculo NVARCHAR(50) NOT NULL,
+    Motorista NVARCHAR(100) NOT NULL,
+    CapacidadeKG INT,
+    Ativo BIT NOT NULL DEFAULT 1
+);
+GO
+
+-- Adiciona um índice na placa para buscas rápidas.
+CREATE INDEX IDX_Veiculos_Placa ON Veiculos(Placa);
+GO
+
+-- ---------------------------------------------------------------------------------
+-- Tabela: CargasManuais
+-- Armazena cargas inseridas manualmente, via CSV ou importadas do ERP.
+-- Estas são as cargas disponíveis para serem incluídas em um lançamento.
+-- ---------------------------------------------------------------------------------
+CREATE TABLE CargasManuais (
+    ID_Carga INT IDENTITY(1,1) PRIMARY KEY,
+    NumeroCarga NVARCHAR(50) NOT NULL,
+    Cidade NVARCHAR(100) NOT NULL,
+    ValorCTE DECIMAL(10, 2) NOT NULL,
+    DataCTE DATE NOT NULL,
+    KM INT,
+    COD_VEICULO NVARCHAR(50) NOT NULL,
+    Origem NVARCHAR(20) CHECK (Origem IN ('ERP', 'CSV', 'Manual')), -- Valida a origem da carga
+    Excluido BIT NOT NULL DEFAULT 0,
+    MotivoExclusao NVARCHAR(255),
+    
+    CONSTRAINT FK_CargasManuais_Veiculos FOREIGN KEY (COD_VEICULO) REFERENCES Veiculos(COD_Veiculo)
+);
+GO
+
+-- Adiciona um índice composto para otimizar a busca de cargas por veículo e data.
+CREATE INDEX IDX_CargasManuais_Busca ON CargasManuais(COD_VEICULO, DataCTE);
+GO
+
+
+-- ---------------------------------------------------------------------------------
+-- Tabela: ParametrosValores
+-- Define o valor base do frete com base na cidade e no tipo de veículo.
+-- ---------------------------------------------------------------------------------
+CREATE TABLE ParametrosValores (
+    ID_Parametro INT IDENTITY(1,1) PRIMARY KEY,
+    Cidade NVARCHAR(100) NOT NULL,
+    TipoVeiculo NVARCHAR(50) NOT NULL,
+    ValorBase DECIMAL(10, 2) NOT NULL,
+    KM INT,
+    
+    -- Garante que não haja duplicatas para a mesma combinação de cidade e tipo de veículo.
+    CONSTRAINT UQ_ParametrosValores_Cidade_Tipo UNIQUE (Cidade, TipoVeiculo)
+);
+GO
+
+
+-- ---------------------------------------------------------------------------------
+-- Tabela: ParametrosTaxas
+-- Define taxas adicionais (pedágio, balsa, etc.) por cidade.
+-- ---------------------------------------------------------------------------------
+CREATE TABLE ParametrosTaxas (
+    ID_Taxa INT IDENTITY(1,1) PRIMARY KEY,
+    Cidade NVARCHAR(100) NOT NULL UNIQUE,
+    Pedagio DECIMAL(10, 2) NOT NULL DEFAULT 0,
+    Balsa DECIMAL(10, 2) NOT NULL DEFAULT 0,
+    Ambiental DECIMAL(10, 2) NOT NULL DEFAULT 0,
+    Chapa DECIMAL(10, 2) NOT NULL DEFAULT 0,
+    Outras DECIMAL(10, 2) NOT NULL DEFAULT 0
+);
+GO
+
+
+-- ---------------------------------------------------------------------------------
+-- Tabela: Lancamentos
+-- Tabela principal que registra cada frete realizado.
+-- Armazena um resumo do cálculo para referência rápida.
+-- ---------------------------------------------------------------------------------
+CREATE TABLE Lancamentos (
+    ID_Lancamento INT IDENTITY(1,1) PRIMARY KEY,
+    DataFrete DATE NOT NULL,
+    ID_Veiculo INT NOT NULL,
+    Usuario NVARCHAR(100),
+    Motivo NVARCHAR(255), -- Motivo da substituição/relançamento
+    Excluido BIT NOT NULL DEFAULT 0,
+    MotivoExclusao NVARCHAR(255),
+    DataCriacao DATETIME NOT NULL DEFAULT GETDATE(),
+
+    -- Campos do cálculo (denormalizados para manter o histórico)
+    CidadeBase NVARCHAR(100),
+    KMBase INT,
+    ValorBase DECIMAL(10, 2),
+    Pedagio DECIMAL(10, 2),
+    Balsa DECIMAL(10, 2),
+    Ambiental DECIMAL(10, 2),
+    Chapa DECIMAL(10, 2),
+    Outras DECIMAL(10, 2),
+    ValorTotal DECIMAL(10, 2),
+
+    CONSTRAINT FK_Lancamentos_Veiculos FOREIGN KEY (ID_Veiculo) REFERENCES Veiculos(ID_Veiculo)
+);
+GO
+
+-- Adiciona índices para otimizar as consultas do relatório.
+CREATE INDEX IDX_Lancamentos_DataFrete ON Lancamentos(DataFrete);
+CREATE INDEX IDX_Lancamentos_ID_Veiculo ON Lancamentos(ID_Veiculo);
+GO
+
+
+-- ---------------------------------------------------------------------------------
+-- Tabela: Lancamento_Cargas
+-- Tabela de junção para registrar quais cargas pertencem a qual lançamento.
+-- Os dados da carga são copiados aqui para garantir a integridade histórica,
+-- ou seja, se uma carga for alterada em CargasManuais, o registro do
+-- lançamento permanece com os dados originais.
+-- ---------------------------------------------------------------------------------
+CREATE TABLE Lancamento_Cargas (
+    ID_Lancamento_Carga INT IDENTITY(1,1) PRIMARY KEY,
+    ID_Lancamento INT NOT NULL,
+    ID_Carga_Origem INT NOT NULL, -- ID da carga na tabela CargasManuais
+
+    -- Cópia dos dados da carga no momento do lançamento
+    NumeroCarga NVARCHAR(50) NOT NULL,
+    Cidade NVARCHAR(100) NOT NULL,
+    ValorCTE DECIMAL(10, 2) NOT NULL,
+    DataCTE DATE NOT NULL,
+    KM INT,
+    COD_VEICULO NVARCHAR(50) NOT NULL,
+    
+    CONSTRAINT FK_Lancamento_Cargas_Lancamento FOREIGN KEY (ID_Lancamento) REFERENCES Lancamentos(ID_Lancamento) ON DELETE CASCADE
+);
+GO
+
+-- Adiciona um índice para buscar rapidamente as cargas de um lançamento.
+CREATE INDEX IDX_Lancamento_Cargas_ID_Lancamento ON Lancamento_Cargas(ID_Lancamento);
+GO
+
+-- =================================================================================
+-- FIM DO ESQUEMA
+-- =================================================================================
