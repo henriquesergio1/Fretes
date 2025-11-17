@@ -6,7 +6,7 @@ services:
     # O Portainer usará isso para baixar e construir a API automaticamente.
     # O '#main' no final especifica o branch. Mude se você usar um branch diferente (ex: #master).
     build:
-      context: https://github.com/henriquesergio1/Fretes.gitt#main
+      context: https://github.com/henriquesergio1/Fretes.git#main
       dockerfile: api/Dockerfile
     container_name: fretes-api
     restart: unless-stopped
