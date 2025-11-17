@@ -1,7 +1,6 @@
 import React, { useState, useContext, useEffect, useMemo } from 'react';
 import { DataContext } from '../context/DataContext';
 import { ParametroValor, ParametroTaxa } from '../types';
-import * as api from '../services/apiService';
 import { PlusCircleIcon, PencilIcon, XCircleIcon, TrashIcon, ChevronUpIcon, ChevronDownIcon } from './icons';
 
 // --- Reusable Card Component ---
@@ -86,7 +85,7 @@ const ValorModal: React.FC<{
 
 // --- Component for Managing Value Parameters ---
 const GestaoParametrosValores: React.FC = () => {
-    const { parametrosValores, reloadData } = useContext(DataContext);
+    const { parametrosValores, addParametroValor, updateParametroValor, deleteParametroValor } = useContext(DataContext);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingParam, setEditingParam] = useState<ParametroValor | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
@@ -143,11 +142,10 @@ const GestaoParametrosValores: React.FC = () => {
 
         try {
             if (paramToSave.ID_Parametro === 0) {
-                await api.createParametroValor(paramToSave);
+                await addParametroValor(paramToSave);
             } else {
-                await api.updateParametroValor(paramToSave.ID_Parametro, paramToSave);
+                await updateParametroValor(paramToSave);
             }
-            await reloadData('parametrosValores');
             handleCloseModal();
         } catch (error) {
              alert('Erro ao salvar parâmetro: ' + error);
@@ -157,8 +155,7 @@ const GestaoParametrosValores: React.FC = () => {
     const handleDelete = async (id: number) => {
         if(window.confirm('Tem certeza que deseja excluir este parâmetro?')) {
             try {
-                await api.deleteParametroValor(id);
-                await reloadData('parametrosValores');
+                await deleteParametroValor(id);
             } catch (error) {
                  alert('Erro ao excluir parâmetro: ' + error);
             }
@@ -313,7 +310,7 @@ const TaxaModal: React.FC<{
 
 // --- Component for Managing Tax Parameters ---
 const GestaoParametrosTaxas: React.FC = () => {
-    const { parametrosTaxas, reloadData } = useContext(DataContext);
+    const { parametrosTaxas, addParametroTaxa, updateParametroTaxa, deleteParametroTaxa } = useContext(DataContext);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingParam, setEditingParam] = useState<ParametroTaxa | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
@@ -387,11 +384,10 @@ const GestaoParametrosTaxas: React.FC = () => {
 
         try {
             if (paramToSave.ID_Taxa === 0) {
-                await api.createParametroTaxa(paramToSave);
+                await addParametroTaxa(paramToSave);
             } else {
-                await api.updateParametroTaxa(paramToSave.ID_Taxa, paramToSave);
+                await updateParametroTaxa(paramToSave);
             }
-            await reloadData('parametrosTaxas');
             handleCloseModal();
         } catch (error) {
              alert('Erro ao salvar taxa: ' + error);
@@ -401,8 +397,7 @@ const GestaoParametrosTaxas: React.FC = () => {
     const handleDelete = async (id: number) => {
          if(window.confirm('Tem certeza que deseja excluir este parâmetro de taxa?')) {
              try {
-                await api.deleteParametroTaxa(id);
-                await reloadData('parametrosTaxas');
+                await deleteParametroTaxa(id);
             } catch (error) {
                  alert('Erro ao excluir taxa: ' + error);
             }

@@ -36,10 +36,7 @@ export const getVeiculos = (): Promise<Veiculo[]> => {
 export const getCargas = async (params?: { veiculoCod?: string, data?: string }): Promise<Carga[]> => {
     if (API_MODE === 'mock') return mockApi.getMockCargas(params);
     
-    // Na API real, as cargas do ERP são buscadas separadamente das manuais
-    // Esta função agora deve buscar apenas as cargas manuais para a seleção no lançamento.
-    // A busca de cargas do ERP para lançamento não está implementada na API, apenas a importação.
-    // Para manter a funcionalidade, vamos buscar apenas as manuais.
+    // Na API real, esta função busca as cargas manuais/importadas para seleção no lançamento.
     let cargasManuais: Carga[] = await fetch(`${API_URL}/cargas-manuais`).then(handleResponse);
     
     // Aplicar filtros no frontend, pois a API simples não os suporta
@@ -82,12 +79,12 @@ export const getLancamentos = (): Promise<Lancamento[]> => {
 // --- Funções de Escrita (POST, PUT, DELETE) ---
 
 export const createLancamento = (lancamento: NewLancamento): Promise<Lancamento> => {
-    if (API_MODE === 'mock') throw new Error("Função não implementada em modo mock.");
+    if (API_MODE === 'mock') return mockApi.createMockLancamento(lancamento);
     return apiRequest(`${API_URL}/lancamentos`, 'POST', lancamento);
 };
 
 export const deleteLancamento = (id: number, motivo: string): Promise<void> => {
-    if (API_MODE === 'mock') throw new Error("Função não implementada em modo mock.");
+    if (API_MODE === 'mock') return mockApi.deleteMockLancamento(id, motivo);
     return apiRequest(`${API_URL}/lancamentos/${id}`, 'PUT', { motivo });
 };
 
@@ -117,7 +114,6 @@ export const deleteCarga = (id: number, motivo: string): Promise<void> => {
     return apiRequest(`${API_URL}/cargas-manuais/${id}`, 'PUT', body);
 };
 
-// FIX: Implemented CRUD for ParametrosValores
 export const createParametroValor = (param: Omit<ParametroValor, 'ID_Parametro'>): Promise<ParametroValor> => {
     if (API_MODE === 'mock') return mockApi.createMockParametroValor(param);
     return apiRequest(`${API_URL}/parametros-valores`, 'POST', param);
@@ -133,7 +129,6 @@ export const deleteParametroValor = (id: number): Promise<void> => {
     return apiRequest(`${API_URL}/parametros-valores/${id}`, 'DELETE');
 };
 
-// FIX: Implemented CRUD for ParametrosTaxas
 export const createParametroTaxa = (param: Omit<ParametroTaxa, 'ID_Taxa'>): Promise<ParametroTaxa> => {
     if (API_MODE === 'mock') return mockApi.createMockParametroTaxa(param);
     return apiRequest(`${API_URL}/parametros-taxas`, 'POST', param);

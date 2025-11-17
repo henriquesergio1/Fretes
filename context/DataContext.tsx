@@ -29,6 +29,14 @@ interface DataContextType {
     addCarga: (carga: Omit<Carga, 'ID_Carga'>) => Promise<void>;
     updateCarga: (carga: Carga) => Promise<void>;
     deleteCarga: (id: number, motivo: string) => Promise<void>;
+
+    addParametroValor: (param: Omit<ParametroValor, 'ID_Parametro'>) => Promise<void>;
+    updateParametroValor: (param: ParametroValor) => Promise<void>;
+    deleteParametroValor: (id: number) => Promise<void>;
+    
+    addParametroTaxa: (param: Omit<ParametroTaxa, 'ID_Taxa'>) => Promise<void>;
+    updateParametroTaxa: (param: ParametroTaxa) => Promise<void>;
+    deleteParametroTaxa: (id: number) => Promise<void>;
 }
 
 export const DataContext = createContext<DataContextType>({} as DataContextType);
@@ -95,7 +103,6 @@ export const DataProvider: React.FC<{children: ReactNode}> = ({ children }) => {
             return;
         }
         try {
-            // setLoading(true); // Opcional: mostrar loading em recargas parciais
             switch (dataType) {
                 case 'veiculos': setVeiculos(await api.getVeiculos()); break;
                 case 'cargas': setCargas(await api.getCargasManuais()); break;
@@ -105,8 +112,6 @@ export const DataProvider: React.FC<{children: ReactNode}> = ({ children }) => {
             }
         } catch (err: any) {
             setError(`Falha ao recarregar dados de ${dataType}: ${err.message}`);
-        } finally {
-            // setLoading(false);
         }
     }, [loadInitialData]);
     
@@ -119,9 +124,7 @@ export const DataProvider: React.FC<{children: ReactNode}> = ({ children }) => {
     };
 
     const updateLancamento = async (lancamento: Lancamento): Promise<Lancamento> => {
-        // A API atual não suporta edição, apenas criação de um novo e exclusão do antigo.
-        // Simulamos aqui para o modo MOCK, mas a API real deveria implementar isso.
-        console.warn("A atualização de lançamentos não é suportada pela API. Criando um novo...");
+        // A API agora suporta exclusão. A lógica de criar um novo e excluir o antigo é mantida.
         const novoLancamento = await addLancamento(lancamento);
         await deleteLancamento(lancamento.ID_Lancamento, lancamento.Motivo || 'Substituição por edição.');
         return novoLancamento;
@@ -155,6 +158,32 @@ export const DataProvider: React.FC<{children: ReactNode}> = ({ children }) => {
         await reloadData('cargas');
     };
 
+    const addParametroValor = async (param: Omit<ParametroValor, 'ID_Parametro'>) => {
+        await api.createParametroValor(param);
+        await reloadData('parametrosValores');
+    };
+    const updateParametroValor = async (param: ParametroValor) => {
+        await api.updateParametroValor(param.ID_Parametro, param);
+        await reloadData('parametrosValores');
+    };
+    const deleteParametroValor = async (id: number) => {
+        await api.deleteParametroValor(id);
+        await reloadData('parametrosValores');
+    };
+
+    const addParametroTaxa = async (param: Omit<ParametroTaxa, 'ID_Taxa'>) => {
+        await api.createParametroTaxa(param);
+        await reloadData('parametrosTaxas');
+    };
+    const updateParametroTaxa = async (param: ParametroTaxa) => {
+        await api.updateParametroTaxa(param.ID_Taxa, param);
+        await reloadData('parametrosTaxas');
+    };
+    const deleteParametroTaxa = async (id: number) => {
+        await api.deleteParametroTaxa(id);
+        await reloadData('parametrosTaxas');
+    };
+
     return (
         <DataContext.Provider value={{
             veiculos,
@@ -177,6 +206,12 @@ export const DataProvider: React.FC<{children: ReactNode}> = ({ children }) => {
             addCarga,
             updateCarga,
             deleteCarga,
+            addParametroValor,
+            updateParametroValor,
+            deleteParametroValor,
+            addParametroTaxa,
+            updateParametroTaxa,
+            deleteParametroTaxa
         }}>
             {children}
         </DataContext.Provider>

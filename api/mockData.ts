@@ -1,4 +1,4 @@
-import { Veiculo, Carga, ParametroValor, ParametroTaxa, MotivoSubstituicao, Lancamento } from '../types';
+import { Veiculo, Carga, ParametroValor, ParametroTaxa, MotivoSubstituicao, Lancamento, NewLancamento } from '../types';
 
 // --- MOCK DATA ---
 // Simula o estado do banco de dados para desenvolvimento offline.
@@ -48,7 +48,7 @@ const mockMotivosSubstituicao: MotivoSubstituicao[] = [
 ];
 
 // Lançamentos
-const mockLancamentos: Lancamento[] = [
+let mockLancamentos: Lancamento[] = [
     {
         ID_Lancamento: 1,
         DataFrete: '2024-05-21',
@@ -231,5 +231,22 @@ export const deleteMockParametroTaxa = async (id: number): Promise<void> => {
     const index = mockParametrosTaxas.findIndex(p => p.ID_Taxa === id);
     if (index === -1) return Promise.reject(new Error("Taxa não encontrada"));
     mockParametrosTaxas.splice(index, 1);
+    return Promise.resolve();
+};
+
+export const createMockLancamento = async (lancamento: NewLancamento): Promise<Lancamento> => {
+    await delay(100);
+    const newId = Math.max(0, ...mockLancamentos.map(l => l.ID_Lancamento)) + 1;
+    const newLancamento: Lancamento = { ...lancamento, ID_Lancamento: newId };
+    mockLancamentos.push(newLancamento);
+    return Promise.resolve(newLancamento);
+};
+
+export const deleteMockLancamento = async (id: number, motivo: string): Promise<void> => {
+    await delay(100);
+    const index = mockLancamentos.findIndex(l => l.ID_Lancamento === id);
+    if (index === -1) return Promise.reject(new Error("Lançamento não encontrado"));
+    mockLancamentos[index].Excluido = true;
+    mockLancamentos[index].MotivoExclusao = motivo;
     return Promise.resolve();
 };
