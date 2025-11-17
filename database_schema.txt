@@ -1,11 +1,42 @@
 -- =================================================================================
--- ESQUEMA DO BANCO DE DADOS PARA O SISTEMA DE GESTÃO DE FRETES
+-- SCRIPT DE CRIAÇÃO COMPLETA DO BANCO DE DADOS PARA O SISTEMA DE GESTÃO DE FRETES
 -- Dialeto: Transact-SQL (T-SQL) para Microsoft SQL Server
+--
+-- Este script realiza as seguintes ações:
+-- 1. Cria o banco de dados 'Fretes' se ele não existir.
+-- 2. Define o contexto para usar o banco de dados 'Fretes'.
+-- 3. Remove as tabelas existentes (se houver) na ordem correta para evitar erros de dependência.
+-- 4. Cria todas as tabelas, chaves primárias, chaves estrangeiras e índices necessários.
+-- =================================================================================
+
+-- 1. CRIAÇÃO DO BANCO DE DADOS (SE NÃO EXISTIR)
+IF NOT EXISTS (SELECT * FROM sys.databases WHERE name = 'Fretes')
+BEGIN
+    CREATE DATABASE Fretes;
+END;
+GO
+
+-- 2. DEFINIÇÃO DO CONTEXTO DO BANCO DE DADOS
+USE Fretes;
+GO
+
+-- 3. REMOÇÃO DE TABELAS EXISTENTES (EM ORDEM DE DEPENDÊNCIA INVERSA)
+IF OBJECT_ID('dbo.Lancamento_Cargas', 'U') IS NOT NULL DROP TABLE dbo.Lancamento_Cargas;
+IF OBJECT_ID('dbo.Lancamentos', 'U') IS NOT NULL DROP TABLE dbo.Lancamentos;
+IF OBJECT_ID('dbo.CargasManuais', 'U') IS NOT NULL DROP TABLE dbo.CargasManuais;
+IF OBJECT_ID('dbo.Veiculos', 'U') IS NOT NULL DROP TABLE dbo.Veiculos;
+IF OBJECT_ID('dbo.ParametrosValores', 'U') IS NOT NULL DROP TABLE dbo.ParametrosValores;
+IF OBJECT_ID('dbo.ParametrosTaxas', 'U') IS NOT NULL DROP TABLE dbo.ParametrosTaxas;
+GO
+
+-- =================================================================================
+-- 4. CRIAÇÃO DAS TABELAS
 -- =================================================================================
 
 -- ---------------------------------------------------------------------------------
 -- Tabela: Veiculos
 -- Armazena informações sobre a frota de veículos.
+-- É uma tabela central, referenciada por Cargas e Lançamentos.
 -- ---------------------------------------------------------------------------------
 CREATE TABLE Veiculos (
     ID_Veiculo INT IDENTITY(1,1) PRIMARY KEY,
@@ -20,6 +51,37 @@ GO
 
 -- Adiciona um índice na placa para buscas rápidas.
 CREATE INDEX IDX_Veiculos_Placa ON Veiculos(Placa);
+GO
+
+-- ---------------------------------------------------------------------------------
+-- Tabela: ParametrosValores
+-- Define o valor base do frete com base na cidade e no tipo de veículo.
+-- ---------------------------------------------------------------------------------
+CREATE TABLE ParametrosValores (
+    ID_Parametro INT IDENTITY(1,1) PRIMARY KEY,
+    Cidade NVARCHAR(100) NOT NULL,
+    TipoVeiculo NVARCHAR(50) NOT NULL,
+    ValorBase DECIMAL(10, 2) NOT NULL,
+    KM INT,
+    
+    -- Garante que não haja duplicatas para a mesma combinação de cidade e tipo de veículo.
+    CONSTRAINT UQ_ParametrosValores_Cidade_Tipo UNIQUE (Cidade, TipoVeiculo)
+);
+GO
+
+-- ---------------------------------------------------------------------------------
+-- Tabela: ParametrosTaxas
+-- Define taxas adicionais (pedágio, balsa, etc.) por cidade.
+-- ---------------------------------------------------------------------------------
+CREATE TABLE ParametrosTaxas (
+    ID_Taxa INT IDENTITY(1,1) PRIMARY KEY,
+    Cidade NVARCHAR(100) NOT NULL UNIQUE,
+    Pedagio DECIMAL(10, 2) NOT NULL DEFAULT 0,
+    Balsa DECIMAL(10, 2) NOT NULL DEFAULT 0,
+    Ambiental DECIMAL(10, 2) NOT NULL DEFAULT 0,
+    Chapa DECIMAL(10, 2) NOT NULL DEFAULT 0,
+    Outras DECIMAL(10, 2) NOT NULL DEFAULT 0
+);
 GO
 
 -- ---------------------------------------------------------------------------------
@@ -46,40 +108,6 @@ GO
 -- Adiciona um índice composto para otimizar a busca de cargas por veículo e data.
 CREATE INDEX IDX_CargasManuais_Busca ON CargasManuais(COD_VEICULO, DataCTE);
 GO
-
-
--- ---------------------------------------------------------------------------------
--- Tabela: ParametrosValores
--- Define o valor base do frete com base na cidade e no tipo de veículo.
--- ---------------------------------------------------------------------------------
-CREATE TABLE ParametrosValores (
-    ID_Parametro INT IDENTITY(1,1) PRIMARY KEY,
-    Cidade NVARCHAR(100) NOT NULL,
-    TipoVeiculo NVARCHAR(50) NOT NULL,
-    ValorBase DECIMAL(10, 2) NOT NULL,
-    KM INT,
-    
-    -- Garante que não haja duplicatas para a mesma combinação de cidade e tipo de veículo.
-    CONSTRAINT UQ_ParametrosValores_Cidade_Tipo UNIQUE (Cidade, TipoVeiculo)
-);
-GO
-
-
--- ---------------------------------------------------------------------------------
--- Tabela: ParametrosTaxas
--- Define taxas adicionais (pedágio, balsa, etc.) por cidade.
--- ---------------------------------------------------------------------------------
-CREATE TABLE ParametrosTaxas (
-    ID_Taxa INT IDENTITY(1,1) PRIMARY KEY,
-    Cidade NVARCHAR(100) NOT NULL UNIQUE,
-    Pedagio DECIMAL(10, 2) NOT NULL DEFAULT 0,
-    Balsa DECIMAL(10, 2) NOT NULL DEFAULT 0,
-    Ambiental DECIMAL(10, 2) NOT NULL DEFAULT 0,
-    Chapa DECIMAL(10, 2) NOT NULL DEFAULT 0,
-    Outras DECIMAL(10, 2) NOT NULL DEFAULT 0
-);
-GO
-
 
 -- ---------------------------------------------------------------------------------
 -- Tabela: Lancamentos
@@ -116,7 +144,6 @@ CREATE INDEX IDX_Lancamentos_DataFrete ON Lancamentos(DataFrete);
 CREATE INDEX IDX_Lancamentos_ID_Veiculo ON Lancamentos(ID_Veiculo);
 GO
 
-
 -- ---------------------------------------------------------------------------------
 -- Tabela: Lancamento_Cargas
 -- Tabela de junção para registrar quais cargas pertencem a qual lançamento.
@@ -146,5 +173,5 @@ CREATE INDEX IDX_Lancamento_Cargas_ID_Lancamento ON Lancamento_Cargas(ID_Lancame
 GO
 
 -- =================================================================================
--- FIM DO ESQUEMA
+-- FIM DO SCRIPT
 -- =================================================================================
