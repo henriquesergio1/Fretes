@@ -107,7 +107,20 @@ function executeQuery(config, query, params = []) {
 
 // --- Criação do Servidor Express ---
 const app = express();
-app.use(cors({ origin: '*' })); // Permite requisições de qualquer origem
+
+// --- Configuração de CORS (Cross-Origin Resource Sharing) ---
+// Configuração robusta para permitir que o frontend (rodando em qualquer domínio)
+// se comunique com esta API, resolvendo o erro "Failed to fetch".
+const corsOptions = {
+  origin: '*', // Permite requisições de qualquer origem
+  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+  preflightContinue: false,
+  optionsSuccessStatus: 204
+};
+app.use(cors(corsOptions));
+// Habilita a resposta para requisições de "pre-flight" (verificação) do navegador
+app.options('*', cors(corsOptions)); 
+
 app.use(express.json());
 const port = process.env.API_PORT || 3000;
 
