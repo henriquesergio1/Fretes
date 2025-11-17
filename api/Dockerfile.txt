@@ -1,5 +1,5 @@
 # ===================================================================
-# Dockerfile para a API do Sistema de Fretes
+# Dockerfile para a API do Sistema de Fretes (Referência)
 # ===================================================================
 
 # Etapa 1: Definir a imagem base

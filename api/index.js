@@ -21,6 +21,7 @@ const configOdin = {
     database: process.env.DB_DATABASE_ODIN,
     rowCollectionOnRequestCompletion: true,
     trustServerCertificate: true,
+    connectTimeout: 30000 // 30 segundos de timeout para conexão
   },
 };
 
@@ -38,8 +39,45 @@ const configErp = {
     database: process.env.DB_DATABASE_ERP,
     rowCollectionOnRequestCompletion: true,
     trustServerCertificate: true,
+    connectTimeout: 30000 // 30 segundos de timeout para conexão
   },
 };
+
+// --- Função Auxiliar para Testar Conexão ---
+function testConnection(config, dbName) {
+  return new Promise((resolve, reject) => {
+    const connection = new Connection(config);
+    connection.on('connect', (err) => {
+      connection.close();
+      if (err) {
+        const errorDetails = `
+          ======================================================================
+          FALHA CRÍTICA AO CONECTAR AO BANCO DE DADOS: ${dbName}
+          ======================================================================
+          Servidor: ${config.server}
+          Usuário: ${config.authentication.options.userName}
+          Banco: ${config.options.database}
+          
+          CAUSAS PROVÁVEIS:
+          1. As variáveis de ambiente no Portainer (DB_SERVER_*, DB_USER_*, DB_PASSWORD_*) estão incorretas.
+          2. O servidor do banco de dados não está acessível a partir do container Docker.
+          3. Um firewall está bloqueando a conexão na porta do banco (geralmente 1433).
+          
+          ERRO ORIGINAL: ${err.message}
+          ======================================================================
+        `;
+        return reject(new Error(errorDetails));
+      }
+      resolve();
+    });
+    // Lida com erros de conexão que não disparam o evento 'connect'
+    connection.on('error', (err) => {
+        reject(new Error(`Erro geral de conexão com ${dbName}: ${err.message}`));
+    });
+    connection.connect();
+  });
+}
+
 
 // --- Função Auxiliar para Executar Queries ---
 function executeQuery(config, query, params = []) {
@@ -69,7 +107,7 @@ function executeQuery(config, query, params = []) {
 
 // --- Criação do Servidor Express ---
 const app = express();
-app.use(cors());
+app.use(cors({ origin: '*' })); // Permite requisições de qualquer origem
 app.use(express.json());
 const port = process.env.API_PORT || 3000;
 
@@ -432,7 +470,25 @@ app.delete('/parametros-taxas/:id', async (req, res) => {
     } catch (error) { res.status(500).json({ message: error.message }); }
 });
 
-// Inicia o servidor
-app.listen(port, () => {
-  console.log(`Servidor da API rodando em http://localhost:${port}`);
-});
+
+// --- Função Principal de Inicialização ---
+async function startServer() {
+  try {
+    console.log('Verificando conexão com o banco de dados ODIN...');
+    await testConnection(configOdin, 'ODIN');
+    console.log('Conexão com o banco de dados ODIN bem-sucedida.');
+
+    console.log('Verificando conexão com o banco de dados ERP...');
+    await testConnection(configErp, 'ERP');
+    console.log('Conexão com o banco de dados ERP bem-sucedida.');
+
+    app.listen(port, () => {
+      console.log(`Servidor da API rodando em http://localhost:${port}`);
+    });
+  } catch (error) {
+    console.error(error.message);
+    process.exit(1); // Encerra o processo se a conexão com o banco de dados falhar
+  }
+}
+
+startServer();
