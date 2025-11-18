@@ -16,29 +16,39 @@ declare global {
 
 // Função auxiliar para pegar a configuração atual em TEMPO DE EXECUÇÃO
 const getConfig = () => {
+    // TRAVA DE SEGURANÇA RÍGIDA PARA AMBIENTE DOCKER/PRODUÇÃO
+    // Esta variável é injetada pelo esbuild durante o comando 'npm run build:prod' no Dockerfile.
+    if (process.env.NODE_ENV === 'production') {
+        console.log("[API] Build de Produção detectado. Forçando modo API.");
+        return { mode: 'api', apiUrl: '/api' };
+    }
+
+    // Comportamento normal para desenvolvimento local
     if (typeof window !== 'undefined' && window.APP_CONFIG) {
         return window.APP_CONFIG;
     }
     
-    // MUDANÇA CRÍTICA: O padrão agora é PRODUÇÃO (API)
-    // Se a config não existir (erro de injeção ou cache), tentamos bater na API via proxy.
-    // Isso previne que o Docker caia silenciosamente em modo Mock.
-    console.warn("[API] Configuração global não detectada. Assumindo ambiente de PRODUÇÃO (Proxy Nginx).");
+    // Fallback padrão
     return { mode: 'api', apiUrl: '/api' };
 };
 
-// Helper para logs (opcional, pode ser removido em prod final)
+// Helper para logs
 const logMode = () => {
     const { mode, apiUrl } = getConfig();
-    // console.log(`[API] Executando em modo: ${mode.toUpperCase()} (${apiUrl})`);
 };
 
 // --- UTILITÁRIOS ---
 
 const handleResponse = async (response: Response) => {
     if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: response.statusText }));
-        throw new Error(errorData.message || `Erro HTTP ${response.status}`);
+        // Tenta extrair mensagem de erro do corpo, senão usa o status text
+        let errorMessage = response.statusText;
+        try {
+            const errorData = await response.json();
+            if (errorData && errorData.message) errorMessage = errorData.message;
+        } catch (e) {}
+        
+        throw new Error(`Erro na API (${response.status}): ${errorMessage}`);
     }
     if (response.status === 204) return;
     return response.json();
@@ -46,7 +56,6 @@ const handleResponse = async (response: Response) => {
 
 const apiRequest = async (endpoint: string, method: 'POST' | 'PUT' | 'DELETE', body?: any) => {
     const { apiUrl } = getConfig();
-    // Remove barra final da apiUrl e barra inicial do endpoint para evitar //
     const cleanUrl = apiUrl.replace(/\/$/, '');
     const cleanEndpoint = endpoint.replace(/^\//, '');
     const url = `${cleanUrl}/${cleanEndpoint}`;
@@ -56,19 +65,29 @@ const apiRequest = async (endpoint: string, method: 'POST' | 'PUT' | 'DELETE', b
         headers: { 'Content-Type': 'application/json' },
         body: body ? JSON.stringify(body) : undefined,
     };
-    const response = await fetch(url, options);
-    return handleResponse(response);
+    
+    try {
+        const response = await fetch(url, options);
+        return handleResponse(response);
+    } catch (error: any) {
+        console.error(`[API ERROR] Falha ao conectar em ${url}:`, error);
+        throw error; // Repassa o erro para a UI exibir a mensagem vermelha, SEM fallback para mock.
+    }
 };
 
 const apiGet = async (endpoint: string) => {
     const { apiUrl } = getConfig();
-    // Remove barra final da apiUrl e barra inicial do endpoint para evitar //
     const cleanUrl = apiUrl.replace(/\/$/, '');
     const cleanEndpoint = endpoint.replace(/^\//, '');
     const url = `${cleanUrl}/${cleanEndpoint}`;
 
-    const response = await fetch(url);
-    return handleResponse(response);
+    try {
+        const response = await fetch(url);
+        return handleResponse(response);
+    } catch (error: any) {
+        console.error(`[API ERROR] Falha ao buscar dados de ${url}:`, error);
+        throw error; // Repassa o erro para a UI exibir a mensagem vermelha, SEM fallback para mock.
+    }
 };
 
 // =============================================================================
@@ -175,12 +194,15 @@ const MockService = {
 // Esta função decide qual serviço usar NO MOMENTO DA CHAMADA
 const getService = () => {
     const config = getConfig();
+    
     // Log simples na primeira chamada para debug
     if (!(window as any).hasLoggedApiMode) {
-        console.log(`[API Service] Inicializado em modo: ${config.mode?.toUpperCase()}, URL: ${config.apiUrl}`);
+        console.log(`[API Service] Inicializado. Ambiente NODE_ENV: ${process.env.NODE_ENV}. Modo Ativo: ${config.mode?.toUpperCase()}`);
         (window as any).hasLoggedApiMode = true;
     }
-    // Só usa o MockService se EXPLICITAMENTE configurado como 'mock'
+
+    // IMPORTANTE: Se estivermos em produção (Docker), o getConfig() já forçou 'api'.
+    // O único jeito de cair no MockService agora é se NÃO for produção E o config for explicitamente 'mock'.
     return config.mode === 'mock' ? MockService : RealService;
 };
 

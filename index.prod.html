@@ -11,14 +11,14 @@
 <script>
   // CONFIGURAÇÃO DE AMBIENTE - PRODUÇÃO
   // O Nginx vai rotear todas as chamadas que começam com '/api' para o container da API.
+  // O arquivo JavaScript agora também tem uma trava interna (NODE_ENV='production') que força o uso da API.
   window.APP_CONFIG = {
     mode: 'api',
     apiUrl: '/api' 
   };
-  console.warn('🚀 [ENV] MODO PRODUÇÃO ATIVADO. Configuração injetada:', window.APP_CONFIG);
 </script>
-<!-- Cache busting na URL do CSS -->
-<link href="/dist/output.css?v=docker-prod-v2" rel="stylesheet">
+<!-- Cache busting v3 -->
+<link href="/dist/output.css?v=prod-v3" rel="stylesheet">
 <style>
 /* Custom scrollbar for better aesthetics */
 ::-webkit-scrollbar {
@@ -39,7 +39,7 @@
 </head>
 <body class="bg-slate-900 text-slate-100">
 <div id="root"></div>
-<!-- Cache busting na URL do JS -->
-<script type="module" src="/dist/bundle.js?v=docker-prod-v2"></script>
+<!-- Cache busting v3 -->
+<script type="module" src="/dist/bundle.js?v=prod-v3"></script>
 </body>
 </html>
