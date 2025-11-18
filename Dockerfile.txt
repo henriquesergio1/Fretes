@@ -3,18 +3,22 @@ FROM node:18-alpine AS builder
 
 WORKDIR /app
 
-# Instala as dependências de build
-RUN npm install esbuild tailwindcss papaparse
+# Instala as dependências de build, incluindo react e react-dom
+# O esbuild precisa delas para resolver os imports corretamente.
+RUN npm install esbuild tailwindcss papaparse react react-dom
 
 # Copia os arquivos de configuração e código-fonte
 COPY . .
 
-# Compila o CSS com Tailwind
-# A flag --minify é adicionada para produção
-RUN ./node_modules/.bin/tailwindcss -i ./tailwind-input.css -o ./dist/output.css --minify
+# Garante que o diretório de saída exista
+RUN mkdir -p dist
 
-# Compila e agrupa o TypeScript/React com esbuild
-RUN ./node_modules/.bin/esbuild index.tsx --bundle --outfile=dist/bundle.js --minify --loader:.tsx=tsx
+# Compila o CSS com Tailwind usando npx, que resolve o caminho do executável
+# A flag --minify é adicionada para produção
+RUN npx tailwindcss -i ./tailwind-input.css -o ./dist/output.css --minify
+
+# Compila e agrupa o TypeScript/React com esbuild usando npx
+RUN npx esbuild index.tsx --bundle --outfile=dist/bundle.js --minify --loader:.tsx=tsx
 
 # ===== Estágio 2: Produção =====
 FROM nginx:alpine
@@ -25,7 +29,7 @@ COPY nginx.conf.txt /etc/nginx/conf.d/default.conf
 # Copia os arquivos estáticos compilados do estágio de build
 COPY --from=builder /app/dist/ /usr/share/nginx/html/dist/
 
-# Copia o arquivo HTML de produção (que foi copiado para o builder no passo 'COPY . .')
+# Copia o arquivo HTML de produção
 COPY --from=builder /app/index.prod.html /usr/share/nginx/html/index.html
 
 EXPOSE 80
