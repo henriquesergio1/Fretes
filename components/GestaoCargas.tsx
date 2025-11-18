@@ -271,7 +271,10 @@ export const GestaoCargas: React.FC = () => {
     };
 
     const handleOpenModalForEdit = (carga: Carga) => {
-        setEditingCarga(carga);
+        // CORREÇÃO: Normaliza a data para YYYY-MM-DD.
+        // O banco pode retornar ISO (2025-11-18T00:00:00.000Z). O .split('T')[0] pega só a data.
+        const cleanDate = String(carga.DataCTE).split('T')[0];
+        setEditingCarga({ ...carga, DataCTE: cleanDate });
         setIsModalOpen(true);
     };
 
@@ -380,7 +383,12 @@ export const GestaoCargas: React.FC = () => {
                                 const rowClasses = showOnlyExcluded
                                     ? "bg-red-900/10"
                                     : "bg-slate-800 border-b border-slate-700 hover:bg-slate-700/50";
-                                    
+                                
+                                // CORREÇÃO: Assegura que a string da data seja limpa antes de criar o objeto Date
+                                // Isso resolve o problema "Invalid Date" quando vem ISO do backend.
+                                const rawDate = String(carga.DataCTE).split('T')[0];
+                                const displayDate = new Date(rawDate + 'T00:00:00').toLocaleDateString('pt-BR');
+
                                 return (
                                 <tr key={carga.ID_Carga} className={rowClasses}>
                                     <td className="p-4 font-medium text-white">
@@ -390,7 +398,7 @@ export const GestaoCargas: React.FC = () => {
                                         </div>
                                     </td>
                                     <td className="p-4">{carga.Cidade}</td>
-                                    <td className="p-4">{new Date(carga.DataCTE + 'T00:00:00').toLocaleDateString('pt-BR')}</td>
+                                    <td className="p-4">{displayDate}</td>
                                     <td className="p-4">{carga.ValorCTE.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
                                     <td className="p-4 font-mono text-xs">{carga.COD_VEICULO}</td>
                                     {showOnlyExcluded && (
