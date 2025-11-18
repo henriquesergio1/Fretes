@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useContext, useEffect } from 'react';
 import { Veiculo } from '../types.ts';
 import { DataContext } from '../context/DataContext.tsx';
-import { PlusCircleIcon, PencilIcon, XCircleIcon } from './icons.tsx';
+import { PlusCircleIcon, PencilIcon, XCircleIcon, CheckCircleIcon } from './icons.tsx';
 
 // --- Modal Component for Editing/Creating Vehicles ---
 const VeiculoModal: React.FC<{
@@ -13,10 +13,12 @@ const VeiculoModal: React.FC<{
     
     const { tiposVeiculo } = useContext(DataContext);
     const [formData, setFormData] = useState<Veiculo | null>(null);
+    const [isManualType, setIsManualType] = useState(false);
 
     useEffect(() => {
         // Initialize form data when veiculo prop changes
         setFormData(veiculo);
+        setIsManualType(false); // Reset manual type mode when opening modal
     }, [veiculo]);
 
     if (!isOpen || !formData) return null;
@@ -31,11 +33,21 @@ const VeiculoModal: React.FC<{
     };
 
     const handleSaveClick = () => {
+        if (!formData.Placa || !formData.TipoVeiculo) {
+            alert("Placa e Tipo de Veículo são obrigatórios.");
+            return;
+        }
         const processedData: Veiculo = {
             ...formData,
             CapacidadeKG: parseFloat(String(formData.CapacidadeKG)) || 0,
         };
         onSave(processedData);
+    };
+
+    const toggleManualType = () => {
+        setIsManualType(!isManualType);
+        // Opcional: Limpar o campo ao trocar de modo para forçar uma escolha consciente
+        setFormData({ ...formData, TipoVeiculo: '' });
     };
 
     return (
@@ -53,12 +65,12 @@ const VeiculoModal: React.FC<{
                 <div className="space-y-4">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
-                            <label htmlFor="Placa" className="block text-sm font-medium text-slate-300 mb-1">Placa</label>
-                            <input type="text" name="Placa" id="Placa" value={formData.Placa} onChange={handleChange} className="w-full bg-slate-700 text-white border border-slate-600 rounded-md p-2 focus:ring-sky-500 focus:border-sky-500" />
+                            <label htmlFor="Placa" className="block text-sm font-medium text-slate-300 mb-1">Placa *</label>
+                            <input type="text" name="Placa" id="Placa" value={formData.Placa} onChange={handleChange} className="w-full bg-slate-700 text-white border border-slate-600 rounded-md p-2 focus:ring-sky-500 focus:border-sky-500" placeholder="AAA-0000" />
                         </div>
                         <div>
-                            <label htmlFor="COD_Veiculo" className="block text-sm font-medium text-slate-300 mb-1">Código do Veículo</label>
-                            <input type="text" name="COD_Veiculo" id="COD_Veiculo" value={formData.COD_Veiculo} onChange={handleChange} className="w-full bg-slate-700 text-white border border-slate-600 rounded-md p-2 focus:ring-sky-500 focus:border-sky-500" />
+                            <label htmlFor="COD_Veiculo" className="block text-sm font-medium text-slate-300 mb-1">Código (ERP)</label>
+                            <input type="text" name="COD_Veiculo" id="COD_Veiculo" value={formData.COD_Veiculo} onChange={handleChange} className="w-full bg-slate-700 text-white border border-slate-600 rounded-md p-2 focus:ring-sky-500 focus:border-sky-500" placeholder="Ex: VEC001" />
                         </div>
                     </div>
                     <div>
@@ -67,20 +79,49 @@ const VeiculoModal: React.FC<{
                     </div>
                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
-                            <label htmlFor="TipoVeiculo" className="block text-sm font-medium text-slate-300 mb-1">Tipo de Veículo</label>
-                            <select name="TipoVeiculo" id="TipoVeiculo" value={formData.TipoVeiculo} onChange={handleChange} className="w-full bg-slate-700 text-white border border-slate-600 rounded-md p-2 focus:ring-sky-500 focus:border-sky-500">
-                                <option value="">Selecione um tipo</option>
-                                {tiposVeiculo.map(tipo => (
-                                    <option key={tipo} value={tipo}>{tipo}</option>
-                                ))}
-                            </select>
+                            <label htmlFor="TipoVeiculo" className="block text-sm font-medium text-slate-300 mb-1">Tipo de Veículo *</label>
+                            <div className="flex gap-2">
+                                {isManualType ? (
+                                    <input 
+                                        type="text" 
+                                        name="TipoVeiculo" 
+                                        id="TipoVeiculo" 
+                                        value={formData.TipoVeiculo} 
+                                        onChange={handleChange} 
+                                        className="w-full bg-slate-700 text-white border border-slate-600 rounded-md p-2 focus:ring-sky-500 focus:border-sky-500 animate-pulse-once"
+                                        placeholder="Digite novo tipo..." 
+                                        autoFocus
+                                    />
+                                ) : (
+                                    <select 
+                                        name="TipoVeiculo" 
+                                        id="TipoVeiculo" 
+                                        value={formData.TipoVeiculo} 
+                                        onChange={handleChange} 
+                                        className="w-full bg-slate-700 text-white border border-slate-600 rounded-md p-2 focus:ring-sky-500 focus:border-sky-500"
+                                    >
+                                        <option value="">Selecione...</option>
+                                        {tiposVeiculo.map(tipo => (
+                                            <option key={tipo} value={tipo}>{tipo}</option>
+                                        ))}
+                                    </select>
+                                )}
+                                <button 
+                                    type="button"
+                                    onClick={toggleManualType}
+                                    className={`p-2 rounded-md transition-colors ${isManualType ? 'bg-slate-600 hover:bg-slate-500 text-white' : 'bg-sky-600 hover:bg-sky-500 text-white'}`}
+                                    title={isManualType ? "Voltar para lista" : "Cadastrar novo tipo"}
+                                >
+                                    {isManualType ? <XCircleIcon className="w-5 h-5"/> : <PlusCircleIcon className="w-5 h-5"/>}
+                                </button>
+                            </div>
                         </div>
                         <div>
                             <label htmlFor="CapacidadeKG" className="block text-sm font-medium text-slate-300 mb-1">Capacidade (KG)</label>
                             <input type="number" name="CapacidadeKG" id="CapacidadeKG" value={formData.CapacidadeKG} onChange={handleChange} className="w-full bg-slate-700 text-white border border-slate-600 rounded-md p-2 focus:ring-sky-500 focus:border-sky-500" />
                         </div>
                     </div>
-                     <div className="flex items-center">
+                     <div className="flex items-center mt-2">
                         <input type="checkbox" name="Ativo" id="Ativo" checked={formData.Ativo} onChange={handleChange} className="h-4 w-4 rounded border-slate-500 bg-slate-700 text-sky-600 focus:ring-sky-500" />
                         <label htmlFor="Ativo" className="ml-2 block text-sm text-slate-300">Veículo Ativo</label>
                     </div>
@@ -90,8 +131,9 @@ const VeiculoModal: React.FC<{
                     <button onClick={onClose} className="bg-slate-600 hover:bg-slate-500 text-white font-bold py-2 px-4 rounded-md transition duration-200">
                         Cancelar
                     </button>
-                    <button onClick={handleSaveClick} className="bg-sky-600 hover:bg-sky-500 text-white font-bold py-2 px-4 rounded-md transition duration-200">
-                        Salvar Alterações
+                    <button onClick={handleSaveClick} className="bg-sky-600 hover:bg-sky-500 text-white font-bold py-2 px-4 rounded-md transition duration-200 flex items-center">
+                        <CheckCircleIcon className="w-5 h-5 mr-2" />
+                        Salvar Veículo
                     </button>
                 </div>
             </div>
@@ -185,6 +227,7 @@ export const GestaoVeiculos: React.FC = () => {
                                 <th scope="col" className="p-4">Placa</th>
                                 <th scope="col" className="p-4">Motorista</th>
                                 <th scope="col" className="p-4">Tipo</th>
+                                <th scope="col" className="p-4">Capacidade</th>
                                 <th scope="col" className="p-4">Status</th>
                                 <th scope="col" className="p-4"><span className="sr-only">Ações</span></th>
                             </tr>
@@ -195,6 +238,7 @@ export const GestaoVeiculos: React.FC = () => {
                                     <td className="p-4 font-medium text-white">{veiculo.Placa}</td>
                                     <td className="p-4">{veiculo.Motorista}</td>
                                     <td className="p-4">{veiculo.TipoVeiculo}</td>
+                                    <td className="p-4">{veiculo.CapacidadeKG.toLocaleString('pt-BR')} kg</td>
                                     <td className="p-4">
                                         <span className={`px-2 py-1 text-xs font-semibold rounded-full ${veiculo.Ativo ? 'bg-green-500/20 text-green-300' : 'bg-red-500/20 text-red-300'}`}>
                                             {veiculo.Ativo ? 'Ativo' : 'Inativo'}
