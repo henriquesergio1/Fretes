@@ -1,3 +1,4 @@
+
 {
   "name": "fretes-frontend",
   "version": "1.0.0",
@@ -5,7 +6,7 @@
   "scripts": {
     "dev": "esbuild index.tsx --bundle --outfile=dist/bundle.js --loader:.tsx=tsx --loader:.ts=ts --serve --servedir=.",
     "build": "mkdir -p dist && npm run build:css && npm run build:js",
-    "build:prod": "mkdir -p dist && npm run build:css && esbuild index.tsx --bundle --outfile=dist/bundle.js --minify --loader:.tsx=tsx --loader:.ts=ts",
+    "build:prod": "mkdir -p dist && npm run build:css && esbuild index.tsx --bundle --outfile=dist/bundle.js --loader:.tsx=tsx --loader:.ts=ts",
     "build:css": "tailwindcss -i ./tailwind-input.css -o ./dist/output.css --minify",
     "build:js": "esbuild index.tsx --bundle --outfile=dist/bundle.js --minify --loader:.tsx=tsx --loader:.ts=ts"
   },

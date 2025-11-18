@@ -14,18 +14,20 @@ declare global {
     }
 }
 
-// Lê a configuração injetada no HTML (index.html ou index.prod.html)
-// Se por algum motivo não existir, assume 'mock' por segurança em dev, ou 'api' se preferir.
-const config = typeof window !== 'undefined' && window.APP_CONFIG 
-    ? window.APP_CONFIG 
-    : { mode: 'mock', apiUrl: 'http://localhost:3030' };
+// Função auxiliar para pegar a configuração atual em TEMPO DE EXECUÇÃO
+const getConfig = () => {
+    if (typeof window !== 'undefined' && window.APP_CONFIG) {
+        return window.APP_CONFIG;
+    }
+    // Fallback seguro
+    return { mode: 'mock', apiUrl: 'http://localhost:3030' };
+};
 
-const API_MODE = config.mode;
-const API_URL = config.apiUrl;
-
-console.log(`%c[SISTEMA] Configuração Window Carregada`, 'background: #00bcd4; color: #000; padding: 4px; font-weight: bold;');
-console.log(`> Modo: ${API_MODE.toUpperCase()}`);
-console.log(`> URL: ${API_URL}`);
+// Helper para logs
+const logMode = () => {
+    const { mode, apiUrl } = getConfig();
+    // console.log(`[API] Executando em modo: ${mode.toUpperCase()} (${apiUrl})`);
+};
 
 // --- UTILITÁRIOS ---
 
@@ -38,7 +40,10 @@ const handleResponse = async (response: Response) => {
     return response.json();
 };
 
-const apiRequest = async (url: string, method: 'POST' | 'PUT' | 'DELETE', body?: any) => {
+const apiRequest = async (endpoint: string, method: 'POST' | 'PUT' | 'DELETE', body?: any) => {
+    const { apiUrl } = getConfig();
+    const url = `${apiUrl}${endpoint}`;
+    
     const options: RequestInit = {
         method,
         headers: { 'Content-Type': 'application/json' },
@@ -48,100 +53,63 @@ const apiRequest = async (url: string, method: 'POST' | 'PUT' | 'DELETE', body?:
     return handleResponse(response);
 };
 
+const apiGet = async (endpoint: string) => {
+    const { apiUrl } = getConfig();
+    const response = await fetch(`${apiUrl}${endpoint}`);
+    return handleResponse(response);
+};
+
 // =============================================================================
-// IMPLEMENTAÇÃO DA API REAL (Produção / Docker)
+// IMPLEMENTAÇÃO DA API REAL
 // =============================================================================
 
 const RealService = {
-    // GET
-    getVeiculos: (): Promise<Veiculo[]> => {
-        return fetch(`${API_URL}/veiculos`).then(handleResponse);
-    },
+    getVeiculos: (): Promise<Veiculo[]> => apiGet('/veiculos'),
+    
     getCargas: async (params?: { veiculoCod?: string, data?: string }): Promise<Carga[]> => {
-        let cargas: Carga[] = await fetch(`${API_URL}/cargas-manuais`).then(handleResponse);
-        
+        let cargas: Carga[] = await apiGet('/cargas-manuais');
         if (params) {
-            if (params.data) {
-                cargas = cargas.filter(c => c.DataCTE === params.data);
-            }
-            if (params.veiculoCod) {
-                cargas = cargas.filter(c => c.COD_VEICULO === params.veiculoCod);
-            }
+            if (params.data) cargas = cargas.filter(c => c.DataCTE === params.data);
+            if (params.veiculoCod) cargas = cargas.filter(c => c.COD_VEICULO === params.veiculoCod);
         }
         return cargas.filter(c => !c.Excluido);
     },
-    getCargasManuais: (): Promise<Carga[]> => {
-        return fetch(`${API_URL}/cargas-manuais`).then(handleResponse);
-    },
-    getParametrosValores: (): Promise<ParametroValor[]> => {
-        return fetch(`${API_URL}/parametros-valores`).then(handleResponse);
-    },
-    getParametrosTaxas: (): Promise<ParametroTaxa[]> => {
-        return fetch(`${API_URL}/parametros-taxas`).then(handleResponse);
-    },
-    getMotivosSubstituicao: (): Promise<MotivoSubstituicao[]> => {
-        return fetch(`${API_URL}/motivos-substituicao`).then(handleResponse);
-    },
-    getLancamentos: (): Promise<Lancamento[]> => {
-        return fetch(`${API_URL}/lancamentos`).then(handleResponse);
-    },
+    
+    getCargasManuais: (): Promise<Carga[]> => apiGet('/cargas-manuais'),
+    getParametrosValores: (): Promise<ParametroValor[]> => apiGet('/parametros-valores'),
+    getParametrosTaxas: (): Promise<ParametroTaxa[]> => apiGet('/parametros-taxas'),
+    getMotivosSubstituicao: (): Promise<MotivoSubstituicao[]> => apiGet('/motivos-substituicao'),
+    getLancamentos: (): Promise<Lancamento[]> => apiGet('/lancamentos'),
 
-    // POST / PUT / DELETE
-    createLancamento: (lancamento: NewLancamento): Promise<Lancamento> => {
-        return apiRequest(`${API_URL}/lancamentos`, 'POST', lancamento);
+    createLancamento: (l: NewLancamento): Promise<Lancamento> => apiRequest('/lancamentos', 'POST', l),
+    deleteLancamento: (id: number, motivo: string): Promise<void> => apiRequest(`/lancamentos/${id}`, 'PUT', { motivo }),
+    
+    createVeiculo: (v: Omit<Veiculo, 'ID_Veiculo'>): Promise<Veiculo> => apiRequest('/veiculos', 'POST', v),
+    updateVeiculo: (id: number, v: Veiculo): Promise<Veiculo> => apiRequest(`/veiculos/${id}`, 'PUT', v),
+    
+    createCarga: (c: Omit<Carga, 'ID_Carga'>): Promise<Carga> => apiRequest('/cargas-manuais', 'POST', c),
+    updateCarga: (id: number, c: Carga): Promise<Carga> => apiRequest(`/cargas-manuais/${id}`, 'PUT', c),
+    deleteCarga: (id: number, motivo: string): Promise<void> => apiRequest(`/cargas-manuais/${id}`, 'PUT', { Excluido: true, MotivoExclusao: motivo }),
+    
+    createParametroValor: (p: Omit<ParametroValor, 'ID_Parametro'>): Promise<ParametroValor> => apiRequest('/parametros-valores', 'POST', p),
+    updateParametroValor: (id: number, p: ParametroValor): Promise<ParametroValor> => apiRequest(`/parametros-valores/${id}`, 'PUT', p),
+    deleteParametroValor: (id: number): Promise<void> => apiRequest(`/parametros-valores/${id}`, 'DELETE'),
+    
+    createParametroTaxa: (p: Omit<ParametroTaxa, 'ID_Taxa'>): Promise<ParametroTaxa> => apiRequest('/parametros-taxas', 'POST', p),
+    updateParametroTaxa: (id: number, p: ParametroTaxa): Promise<ParametroTaxa> => apiRequest(`/parametros-taxas/${id}`, 'PUT', p),
+    deleteParametroTaxa: (id: number): Promise<void> => apiRequest(`/parametros-taxas/${id}`, 'DELETE'),
+    
+    importCargasFromERP: async (sIni: string, sFim: string): Promise<{ message: string; count: number }> => {
+        return apiRequest('/cargas-erp/import', 'POST', { sIni, sFim });
     },
-    deleteLancamento: (id: number, motivo: string): Promise<void> => {
-        return apiRequest(`${API_URL}/lancamentos/${id}`, 'PUT', { motivo });
-    },
-    createVeiculo: (veiculo: Omit<Veiculo, 'ID_Veiculo'>): Promise<Veiculo> => {
-        return apiRequest(`${API_URL}/veiculos`, 'POST', veiculo);
-    },
-    updateVeiculo: (id: number, veiculo: Veiculo): Promise<Veiculo> => {
-        return apiRequest(`${API_URL}/veiculos/${id}`, 'PUT', veiculo);
-    },
-    createCarga: (carga: Omit<Carga, 'ID_Carga'>): Promise<Carga> => {
-        return apiRequest(`${API_URL}/cargas-manuais`, 'POST', carga);
-    },
-    updateCarga: (id: number, carga: Carga): Promise<Carga> => {
-        return apiRequest(`${API_URL}/cargas-manuais/${id}`, 'PUT', carga);
-    },
-    deleteCarga: (id: number, motivo: string): Promise<void> => {
-        const body = { Excluido: true, MotivoExclusao: motivo };
-        return apiRequest(`${API_URL}/cargas-manuais/${id}`, 'PUT', body);
-    },
-    createParametroValor: (param: Omit<ParametroValor, 'ID_Parametro'>): Promise<ParametroValor> => {
-        return apiRequest(`${API_URL}/parametros-valores`, 'POST', param);
-    },
-    updateParametroValor: (id: number, param: ParametroValor): Promise<ParametroValor> => {
-        return apiRequest(`${API_URL}/parametros-valores/${id}`, 'PUT', param);
-    },
-    deleteParametroValor: (id: number): Promise<void> => {
-        return apiRequest(`${API_URL}/parametros-valores/${id}`, 'DELETE');
-    },
-    createParametroTaxa: (param: Omit<ParametroTaxa, 'ID_Taxa'>): Promise<ParametroTaxa> => {
-        return apiRequest(`${API_URL}/parametros-taxas`, 'POST', param);
-    },
-    updateParametroTaxa: (id: number, param: ParametroTaxa): Promise<ParametroTaxa> => {
-        return apiRequest(`${API_URL}/parametros-taxas/${id}`, 'PUT', param);
-    },
-    deleteParametroTaxa: (id: number): Promise<void> => {
-        return apiRequest(`${API_URL}/parametros-taxas/${id}`, 'DELETE');
-    },
-
-    // Importação
-    importCargasFromERP: async (startDate: string, endDate:string): Promise<{ message: string; count: number }> => {
-        const body = { sIni: startDate, sFim: endDate };
-        return apiRequest(`${API_URL}/cargas-erp/import`, 'POST', body);
-    },
-    importData: async (file: File, type: 'veiculos' | 'cargas' | 'parametros-valores' | 'parametros-taxas'): Promise<{ message: string; count: number }> => {
-        return new Promise((_, reject) => {
-            reject(new Error("A importação de CSV ainda não está implementada no backend real. Use o cadastro manual ou importação via ERP."));
-        });
+    
+    importData: async (file: File, type: string): Promise<any> => {
+        throw new Error("A importação de CSV ainda não está implementada no backend real.");
     }
 };
 
 // =============================================================================
-// IMPLEMENTAÇÃO DA API MOCK (Apenas para Desenvolvimento)
+// IMPLEMENTAÇÃO DA API MOCK
 // =============================================================================
 
 const MockService = {
@@ -173,7 +141,7 @@ const MockService = {
     
     importCargasFromERP: mockApi.importMockCargasFromERP,
     
-    importData: async (file: File, type: 'veiculos' | 'cargas' | 'parametros-valores' | 'parametros-taxas'): Promise<{ message: string; count: number }> => {
+    importData: async (file: File, type: string): Promise<{ message: string; count: number }> => {
         return new Promise((resolve, reject) => {
             Papa.parse(file, {
                 header: true,
@@ -189,39 +157,40 @@ const MockService = {
 };
 
 // =============================================================================
-// SELEÇÃO DE IMPLEMENTAÇÃO (BASEADA NO WINDOW.APP_CONFIG)
+// EXPORTAÇÕES DINÂMICAS
 // =============================================================================
 
-const isMockMode = API_MODE === 'mock';
-const SelectedService = isMockMode ? MockService : RealService;
+// Esta função decide qual serviço usar NO MOMENTO DA CHAMADA
+const getService = () => {
+    const config = getConfig();
+    return config.mode === 'mock' ? MockService : RealService;
+};
 
-if (!isMockMode) {
-    console.log("⚠️ Usando API REAL (Modo Produção/Docker).");
-} else {
-    console.log("⚠️ Usando MOCK DATA (Modo Desenvolvimento/Local).");
-}
+export const getVeiculos = () => getService().getVeiculos();
+export const getCargas = (params?: { veiculoCod?: string, data?: string }) => getService().getCargas(params);
+export const getCargasManuais = () => getService().getCargasManuais();
+export const getParametrosValores = () => getService().getParametrosValores();
+export const getParametrosTaxas = () => getService().getParametrosTaxas();
+export const getMotivosSubstituicao = () => getService().getMotivosSubstituicao();
+export const getLancamentos = () => getService().getLancamentos();
 
-export const {
-    getVeiculos,
-    getCargas,
-    getCargasManuais,
-    getParametrosValores,
-    getParametrosTaxas,
-    getMotivosSubstituicao,
-    getLancamentos,
-    createLancamento,
-    deleteLancamento,
-    createVeiculo,
-    updateVeiculo,
-    createCarga,
-    updateCarga,
-    deleteCarga,
-    createParametroValor,
-    updateParametroValor,
-    deleteParametroValor,
-    createParametroTaxa,
-    updateParametroTaxa,
-    deleteParametroTaxa,
-    importCargasFromERP,
-    importData
-} = SelectedService;
+export const createLancamento = (data: NewLancamento) => getService().createLancamento(data);
+export const deleteLancamento = (id: number, motivo: string) => getService().deleteLancamento(id, motivo);
+
+export const createVeiculo = (data: Omit<Veiculo, 'ID_Veiculo'>) => getService().createVeiculo(data);
+export const updateVeiculo = (id: number, data: Veiculo) => getService().updateVeiculo(id, data);
+
+export const createCarga = (data: Omit<Carga, 'ID_Carga'>) => getService().createCarga(data);
+export const updateCarga = (id: number, data: Carga) => getService().updateCarga(id, data);
+export const deleteCarga = (id: number, motivo: string) => getService().deleteCarga(id, motivo);
+
+export const createParametroValor = (data: Omit<ParametroValor, 'ID_Parametro'>) => getService().createParametroValor(data);
+export const updateParametroValor = (id: number, data: ParametroValor) => getService().updateParametroValor(id, data);
+export const deleteParametroValor = (id: number) => getService().deleteParametroValor(id);
+
+export const createParametroTaxa = (data: Omit<ParametroTaxa, 'ID_Taxa'>) => getService().createParametroTaxa(data);
+export const updateParametroTaxa = (id: number, data: ParametroTaxa) => getService().updateParametroTaxa(id, data);
+export const deleteParametroTaxa = (id: number) => getService().deleteParametroTaxa(id);
+
+export const importCargasFromERP = (sIni: string, sFim: string) => getService().importCargasFromERP(sIni, sFim);
+export const importData = (file: File, type: any) => getService().importData(file, type);
