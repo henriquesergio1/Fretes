@@ -259,31 +259,52 @@ app.post('/cargas-erp/import', async (req, res) => {
         const connection = new Connection(configOdin);
         connection.connect(err => {
             if (err) return res.status(500).json({ message: `Erro de conexão para inserção: ${err.message}` });
-            connection.beginTransaction(err => {
-                if (err) return res.status(500).json({ message: `Erro ao iniciar transação: ${err.message}` });
-                let completed = 0;
-                cargasParaInserir.forEach(c => {
-                    const query = `INSERT INTO CargasManuais (NumeroCarga, Cidade, ValorCTE, DataCTE, KM, COD_VEICULO, Origem) VALUES (@num, @cidade, @valor, @data, @km, @cod, 'ERP');`;
-                    const request = new Request(query, err => {
-                        if (err) return connection.rollbackTransaction(() => res.status(500).json({ message: `Erro ao inserir carga: ${err.message}` }));
-                        completed++;
-                        if (completed === cargasParaInserir.length) {
-                            connection.commitTransaction(err => {
-                                if (err) return connection.rollbackTransaction(() => res.status(500).json({ message: `Erro ao commitar transação: ${err.message}` }));
-                                res.status(201).json({ message: `${cargasParaInserir.length} novas cargas importadas com sucesso.`, count: cargasParaInserir.length });
+            
+            connection.beginTransaction(async err => {
+                if (err) {
+                    connection.close();
+                    return res.status(500).json({ message: `Erro ao iniciar transação: ${err.message}` });
+                }
+                
+                try {
+                    // Execução Sequencial para evitar erro de conexão ocupada
+                    for (const c of cargasParaInserir) {
+                        const query = `INSERT INTO CargasManuais (NumeroCarga, Cidade, ValorCTE, DataCTE, KM, COD_VEICULO, Origem) VALUES (@num, @cidade, @valor, @data, @km, @cod, 'ERP');`;
+                        
+                        // Wrapper Promise para permitir await na execução do SQL
+                        await new Promise((resolve, reject) => {
+                            const request = new Request(query, (err) => {
+                                if (err) return reject(err);
+                                resolve();
+                            });
+                            // PADRONIZAÇÃO: Conversão explícita para String
+                            request.addParameter('num', TYPES.NVarChar, String(c.NumeroCarga)); 
+                            request.addParameter('cidade', TYPES.NVarChar, c.Cidade);
+                            request.addParameter('valor', TYPES.Decimal, c.ValorCTE); 
+                            request.addParameter('data', TYPES.Date, c.DataCTE);
+                            request.addParameter('km', TYPES.Int, c.KM); 
+                            request.addParameter('cod', TYPES.NVarChar, c.COD_VEICULO);
+                            connection.execSql(request);
+                        });
+                    }
+
+                    connection.commitTransaction(err => {
+                        if (err) {
+                            return connection.rollbackTransaction(() => {
                                 connection.close();
+                                res.status(500).json({ message: `Erro ao commitar transação: ${err.message}` });
                             });
                         }
+                        res.status(201).json({ message: `${cargasParaInserir.length} novas cargas importadas com sucesso.`, count: cargasParaInserir.length });
+                        connection.close();
                     });
-                    // PADRONIZAÇÃO: Conversão explícita para String
-                    request.addParameter('num', TYPES.NVarChar, String(c.NumeroCarga)); 
-                    request.addParameter('cidade', TYPES.NVarChar, c.Cidade);
-                    request.addParameter('valor', TYPES.Decimal, c.ValorCTE); 
-                    request.addParameter('data', TYPES.Date, c.DataCTE);
-                    request.addParameter('km', TYPES.Int, c.KM); 
-                    request.addParameter('cod', TYPES.NVarChar, c.COD_VEICULO);
-                    connection.execSql(request);
-                });
+
+                } catch (error) {
+                    connection.rollbackTransaction(() => {
+                        connection.close();
+                        res.status(500).json({ message: `Erro ao inserir carga (Rollback realizado): ${error.message}` });
+                    });
+                }
             });
         });
     } catch (error) { 
