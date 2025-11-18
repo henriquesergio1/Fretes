@@ -3,14 +3,17 @@ import * as mockApi from '../api/mockData.ts';
 import Papa from 'papaparse';
 
 // =============================================================================
-// CONFIGURAÇÃO DE MODO (DEFINITIVA COM CONTROLE MANUAL)
+// CONFIGURAÇÃO DE MODO (VIA INJEÇÃO HTML)
 // =============================================================================
 
-// 1. Declaração para o TypeScript entender a constante injetada pelo esbuild
-declare const __USE_MOCK__: boolean;
+// Declaração para o TypeScript
+declare global {
+    interface Window {
+        __FRETE_MODO_MOCK__?: boolean;
+    }
+}
 
-// 2. Função para ler preferência do LocalStorage (Prioridade Máxima)
-// Isso permite que você force o modo API mesmo se o build disser o contrário.
+// 1. Função para ler preferência do LocalStorage (Prioridade Máxima - Override do Usuário)
 const getStoredMode = (): boolean | null => {
     try {
         const stored = localStorage.getItem('APP_MODE');
@@ -22,22 +25,27 @@ const getStoredMode = (): boolean | null => {
     return null;
 };
 
-// 3. Configuração de Build (Prioridade Secundária)
-// Se __USE_MOCK__ não estiver definido (ex: erro de compilador), assumimos FALSE (API Real) para segurança em produção.
-const BUILD_MODE_MOCK = typeof __USE_MOCK__ !== 'undefined' ? __USE_MOCK__ : false;
+// 2. Configuração do HTML (index.html define true, index.prod.html define false)
+const getHtmlConfig = (): boolean => {
+    if (typeof window !== 'undefined' && window.__FRETE_MODO_MOCK__ !== undefined) {
+        return window.__FRETE_MODO_MOCK__;
+    }
+    // Fallback de segurança: se não estiver definido no HTML, assume API Real (Produção)
+    return false;
+};
 
-// 4. Determinação Final
-// Se o usuário escolheu manualmente (via UI), usa a escolha. Se não, usa a config de build.
-const USE_MOCK = getStoredMode() ?? BUILD_MODE_MOCK;
+// 3. Determinação Final
+// Se o usuário escolheu manualmente, usa a escolha. Se não, usa a config do arquivo HTML.
+const USE_MOCK = getStoredMode() ?? getHtmlConfig();
 
 const API_BASE_URL = '/api';
 
 console.log(`[API SERVICE] Inicializando...`);
-console.log(`[API SERVICE] Build Config (__USE_MOCK__): ${typeof __USE_MOCK__ !== 'undefined' ? __USE_MOCK__ : 'UNDEFINED (Fallback to False)'}`);
-console.log(`[API SERVICE] LocalStorage Config: ${getStoredMode() === null ? 'Nenhuma (Usando Build)' : (getStoredMode() ? 'Forçar MOCK' : 'Forçar API')}`);
+console.log(`[API SERVICE] HTML Config (window.__FRETE_MODO_MOCK__): ${getHtmlConfig()}`);
+console.log(`[API SERVICE] LocalStorage Config: ${getStoredMode() === null ? 'Nenhuma' : (getStoredMode() ? 'Forçar MOCK' : 'Forçar API')}`);
 console.log(`[API SERVICE] MODO FINAL ATIVO: ${USE_MOCK ? 'MOCK (Dados Falsos)' : 'API REAL (Backend)'}`);
 
-// 5. Exportações para controle manual via UI
+// 4. Exportações para controle manual via UI
 export const toggleMode = (mode: 'MOCK' | 'API') => {
     console.log(`[API SERVICE] Trocando modo para ${mode} e recarregando...`);
     localStorage.setItem('APP_MODE', mode);
@@ -199,7 +207,7 @@ const MockService = {
 // EXPORTAÇÕES
 // =============================================================================
 
-// A constante USE_MOCK já foi definida no topo do arquivo com base no storage + build
+// A constante USE_MOCK já foi definida no topo do arquivo
 export const getVeiculos = USE_MOCK ? MockService.getVeiculos : RealService.getVeiculos;
 export const getCargas = USE_MOCK ? MockService.getCargas : RealService.getCargas;
 export const getCargasManuais = USE_MOCK ? MockService.getCargasManuais : RealService.getCargasManuais;

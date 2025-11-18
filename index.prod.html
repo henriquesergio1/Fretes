@@ -7,8 +7,12 @@
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
 <title>Fretes</title>
-<!-- Cache busting v8 -->
-<link href="/dist/output.css?v=prod-v8" rel="stylesheet">
+<script>
+  // CONFIGURAÇÃO EXPLÍCITA DE AMBIENTE DE PRODUÇÃO
+  window.__FRETE_MODO_MOCK__ = false;
+</script>
+<!-- Cache busting v10 -->
+<link href="/dist/output.css?v=prod-v10" rel="stylesheet">
 <style>
 /* Custom scrollbar for better aesthetics */
 ::-webkit-scrollbar {
@@ -29,7 +33,7 @@
 </head>
 <body class="bg-slate-900 text-slate-100">
 <div id="root"></div>
-<!-- Cache busting v8 -->
-<script type="module" src="/dist/bundle.js?v=prod-v8"></script>
+<!-- Cache busting v10 -->
+<script type="module" src="/dist/bundle.js?v=prod-v10"></script>
 </body>
 </html>
