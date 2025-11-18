@@ -3,32 +3,28 @@ import { Veiculo, Carga, ParametroValor, ParametroTaxa, MotivoSubstituicao, Lanc
 import * as mockApi from '../api/mockData.ts';
 import Papa from 'papaparse';
 
-// --- CONFIGURAÇÃO E AUDITORIA ---
+// --- CONFIGURAÇÃO GLOBAL VIA WINDOW (INJETADA PELO HTML) ---
 
-// Lógica de Fallback: Se as variáveis de ambiente não forem injetadas corretamente pelo build,
-// usamos valores padrão baseados no ambiente provável (localhost vs produção).
-const getEnvMode = () => {
-    if (process.env.API_MODE !== undefined) return process.env.API_MODE;
-    // Se estiver undefined, verifica se é localhost (desenvolvimento) ou não
-    if (typeof window !== 'undefined' && window.location.hostname === 'localhost' && window.location.port !== '8080') {
-        return 'mock';
+declare global {
+    interface Window {
+        APP_CONFIG: {
+            mode: 'api' | 'mock';
+            apiUrl: string;
+        }
     }
-    return 'api'; // Padrão seguro: Produção
-};
+}
 
-const getEnvUrl = () => {
-    if (process.env.API_URL !== undefined) return process.env.API_URL;
-    if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
-        return 'http://localhost:3030';
-    }
-    return 'http://fretes-api:3000';
-};
+// Lê a configuração injetada no HTML (index.html ou index.prod.html)
+// Se por algum motivo não existir, assume 'mock' por segurança em dev, ou 'api' se preferir.
+const config = typeof window !== 'undefined' && window.APP_CONFIG 
+    ? window.APP_CONFIG 
+    : { mode: 'mock', apiUrl: 'http://localhost:3030' };
 
-const API_MODE = getEnvMode();
-const API_URL = getEnvUrl();
+const API_MODE = config.mode;
+const API_URL = config.apiUrl;
 
-console.log(`%c[SISTEMA] Configuração Carregada`, 'background: #333; color: #fff; padding: 4px; font-weight: bold;');
-console.log(`> Modo: ${API_MODE?.toUpperCase()}`);
+console.log(`%c[SISTEMA] Configuração Window Carregada`, 'background: #00bcd4; color: #000; padding: 4px; font-weight: bold;');
+console.log(`> Modo: ${API_MODE.toUpperCase()}`);
 console.log(`> URL: ${API_URL}`);
 
 // --- UTILITÁRIOS ---
@@ -62,10 +58,8 @@ const RealService = {
         return fetch(`${API_URL}/veiculos`).then(handleResponse);
     },
     getCargas: async (params?: { veiculoCod?: string, data?: string }): Promise<Carga[]> => {
-        // Na API real, buscamos as cargas no endpoint /cargas-manuais (que inclui as importadas do ERP)
         let cargas: Carga[] = await fetch(`${API_URL}/cargas-manuais`).then(handleResponse);
         
-        // Filtragem no Client-Side (pois a API atual retorna tudo)
         if (params) {
             if (params.data) {
                 cargas = cargas.filter(c => c.DataCTE === params.data);
@@ -195,16 +189,16 @@ const MockService = {
 };
 
 // =============================================================================
-// SELEÇÃO DE IMPLEMENTAÇÃO
+// SELEÇÃO DE IMPLEMENTAÇÃO (BASEADA NO WINDOW.APP_CONFIG)
 // =============================================================================
 
 const isMockMode = API_MODE === 'mock';
 const SelectedService = isMockMode ? MockService : RealService;
 
 if (!isMockMode) {
-    console.log("⚠️ Usando API REAL. Dados Mock foram desativados.");
+    console.log("⚠️ Usando API REAL (Modo Produção/Docker).");
 } else {
-    console.log("⚠️ Usando MOCK DATA. Dados reais não serão acessados.");
+    console.log("⚠️ Usando MOCK DATA (Modo Desenvolvimento/Local).");
 }
 
 export const {

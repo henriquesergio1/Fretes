@@ -4,7 +4,15 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Fretes</title>
-<link href="/dist/output.css?v=prod-release-2" rel="stylesheet">
+<script>
+  // CONFIGURAÇÃO DE AMBIENTE - PRODUÇÃO
+  // Este arquivo é usado quando rodando via Docker.
+  window.APP_CONFIG = {
+    mode: 'api',
+    apiUrl: 'http://fretes-api:3000' // URL interna do Docker ou Proxy
+  };
+</script>
+<link href="/dist/output.css?v=prod-final-v3" rel="stylesheet">
 <style>
 /* Custom scrollbar for better aesthetics */
 ::-webkit-scrollbar {
@@ -25,6 +33,6 @@
 </head>
 <body class="bg-slate-900 text-slate-100">
 <div id="root"></div>
-<script type="module" src="/dist/bundle.js?v=prod-release-2"></script>
+<script type="module" src="/dist/bundle.js?v=prod-final-v3"></script>
 </body>
 </html>

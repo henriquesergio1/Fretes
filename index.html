@@ -6,6 +6,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Fretes</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      // CONFIGURAÇÃO DE AMBIENTE - DESENVOLVIMENTO
+      // Este arquivo é usado apenas localmente/preview.
+      window.APP_CONFIG = {
+        mode: 'mock',
+        apiUrl: 'http://localhost:3030'
+      };
+    </script>
     <style>
       /* Custom scrollbar for better aesthetics */
       ::-webkit-scrollbar {
@@ -23,7 +31,7 @@
         background: #64748b; /* slate-500 */
       }
     </style>
-  <script type="importmap">
+<script type="importmap">
 {
   "imports": {
     "react": "https://aistudiocdn.com/react@^19.2.0",
