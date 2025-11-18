@@ -115,73 +115,87 @@ export const DataProvider: React.FC<{children: ReactNode}> = ({ children }) => {
         }
     }, [loadInitialData]);
     
-    // --- CRUD Handlers ---
+    // --- CRUD Handlers with Optimistic Updates ---
 
     const addLancamento = async (lancamento: NewLancamento): Promise<Lancamento> => {
         const newLancamento = await api.createLancamento(lancamento);
-        await reloadData('lancamentos');
+        setLancamentos(prev => [...prev, newLancamento]);
         return newLancamento;
     };
 
     const updateLancamento = async (lancamento: Lancamento): Promise<Lancamento> => {
-        // A API agora suporta exclusão. A lógica de criar um novo e excluir o antigo é mantida.
-        const novoLancamento = await addLancamento(lancamento);
-        await deleteLancamento(lancamento.ID_Lancamento, lancamento.Motivo || 'Substituição por edição.');
-        return novoLancamento;
+        const newLancamentoData: NewLancamento = { ...lancamento };
+        const createdLancamento = await api.createLancamento(newLancamentoData);
+        await api.deleteLancamento(lancamento.ID_Lancamento, lancamento.Motivo || 'Substituição por edição.');
+        
+        setLancamentos(prev => {
+            const updatedList = prev.map(l => 
+                l.ID_Lancamento === lancamento.ID_Lancamento 
+                    ? { ...l, Excluido: true, MotivoExclusao: lancamento.Motivo || 'Substituição por edição.' } 
+                    : l
+            );
+            updatedList.push(createdLancamento);
+            return updatedList;
+        });
+        return createdLancamento;
     };
 
     const deleteLancamento = async (id: number, motivo: string) => {
         await api.deleteLancamento(id, motivo);
-        await reloadData('lancamentos');
+        setLancamentos(prev => prev.map(l => 
+            l.ID_Lancamento === id 
+            ? { ...l, Excluido: true, MotivoExclusao: motivo } 
+            : l
+        ));
     };
     
     const addVeiculo = async (veiculo: Omit<Veiculo, 'ID_Veiculo'>) => {
-        await api.createVeiculo(veiculo);
-        await reloadData('veiculos');
+        const newVeiculo = await api.createVeiculo(veiculo);
+        setVeiculos(prev => [...prev, newVeiculo]);
     };
     const updateVeiculo = async (veiculo: Veiculo) => {
-        await api.updateVeiculo(veiculo.ID_Veiculo, veiculo);
-        await reloadData('veiculos');
+        const updatedVeiculo = await api.updateVeiculo(veiculo.ID_Veiculo, veiculo);
+        setVeiculos(prev => prev.map(v => v.ID_Veiculo === veiculo.ID_Veiculo ? updatedVeiculo : v));
     };
 
     const addCarga = async (carga: Omit<Carga, 'ID_Carga'>) => {
         const cargaComOrigem = { ...carga, Origem: carga.Origem || 'Manual' } as Omit<Carga, 'ID_Carga'>;
-        await api.createCarga(cargaComOrigem);
-        await reloadData('cargas');
+        const newCarga = await api.createCarga(cargaComOrigem);
+        setCargas(prev => [...prev, newCarga]);
     };
     const updateCarga = async (carga: Carga) => {
-        await api.updateCarga(carga.ID_Carga, carga);
-        await reloadData('cargas');
+        const updatedCarga = await api.updateCarga(carga.ID_Carga, carga);
+        setCargas(prev => prev.map(c => c.ID_Carga === carga.ID_Carga ? updatedCarga : c));
     };
     const deleteCarga = async (id: number, motivo: string) => {
         await api.deleteCarga(id, motivo);
-        await reloadData('cargas');
+        setCargas(prev => prev.map(c => c.ID_Carga === id ? { ...c, Excluido: true, MotivoExclusao: motivo } : c));
     };
 
     const addParametroValor = async (param: Omit<ParametroValor, 'ID_Parametro'>) => {
-        await api.createParametroValor(param);
-        await reloadData('parametrosValores');
+        const newParam = await api.createParametroValor(param);
+        setParametrosValores(prev => [...prev, newParam]);
     };
     const updateParametroValor = async (param: ParametroValor) => {
-        await api.updateParametroValor(param.ID_Parametro, param);
-        await reloadData('parametrosValores');
+        const updatedParam = await api.updateParametroValor(param.ID_Parametro, param);
+        setParametrosValores(prev => prev.map(p => p.ID_Parametro === param.ID_Parametro ? updatedParam : p));
     };
     const deleteParametroValor = async (id: number) => {
         await api.deleteParametroValor(id);
-        await reloadData('parametrosValores');
+        setParametrosValores(prev => prev.filter(p => p.ID_Parametro !== id));
     };
 
     const addParametroTaxa = async (param: Omit<ParametroTaxa, 'ID_Taxa'>) => {
-        await api.createParametroTaxa(param);
-        await reloadData('parametrosTaxas');
+        const newParam = await api.createParametroTaxa(param);
+        setParametrosTaxas(prev => [...prev, newParam]);
     };
     const updateParametroTaxa = async (param: ParametroTaxa) => {
-        await api.updateParametroTaxa(param.ID_Taxa, param);
-        await reloadData('parametrosTaxas');
+        const updatedParam = await api.updateParametroTaxa(param.ID_Taxa, param);
+        setParametrosTaxas(prev => prev.map(p => p.ID_Taxa === param.ID_Taxa ? updatedParam : p));
     };
     const deleteParametroTaxa = async (id: number) => {
         await api.deleteParametroTaxa(id);
-        await reloadData('parametrosTaxas');
+        setParametrosTaxas(prev => prev.filter(p => p.ID_Taxa !== id));
     };
 
     return (

@@ -2,17 +2,15 @@ server {
     listen 80;
     server_name localhost;
 
+    # Adiciona os tipos MIME padrão do Nginx, essencial para servir JS/CSS corretamente.
+    include /etc/nginx/mime.types;
+
     root /usr/share/nginx/html;
     index index.html;
 
-    # Adiciona a configuração de tipos MIME.
-    # Isso ensina o Nginx a enviar o Content-Type correto para .js, .css, etc.
-    # E corrige o erro "application/octet-stream".
-    include /etc/nginx/mime.types;
-
     location / {
         # Tenta servir o arquivo solicitado diretamente.
-        # Se não encontrar, redireciona a requisição para /index.html (para o React Router).
+        # Se falhar, redireciona para /index.html para o roteamento do React.
         try_files $uri $uri/ /index.html;
     }
 }
