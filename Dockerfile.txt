@@ -12,8 +12,8 @@ RUN npm install
 # Copia o resto dos arquivos do projeto
 COPY . .
 
-# Executa o build (os scripts no package.json criarão o diretório dist)
-RUN npm run build
+# Executa o build de produção (os scripts no package.json criarão o diretório dist)
+RUN npm run build:prod
 
 # ===== Estágio 2: Produção =====
 FROM nginx:alpine

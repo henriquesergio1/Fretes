@@ -1,7 +1,6 @@
 import React, { createContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { Veiculo, ParametroValor, ParametroTaxa, Carga, Lancamento, NewLancamento } from '../types.ts';
 import * as api from '../services/apiService.ts';
-import { API_MODE } from '../api.config.ts';
 
 interface DataContextType {
     veiculos: Veiculo[];
@@ -73,7 +72,7 @@ export const DataProvider: React.FC<{children: ReactNode}> = ({ children }) => {
             setLancamentos(lancamentosData);
         } catch (err: any) {
             console.error("Erro ao carregar dados:", err);
-            const errorMessage = API_MODE === 'api' 
+            const errorMessage = process.env.API_MODE === 'api' 
                 ? 'Falha ao conectar com o backend. Verifique se a API está em execução.' 
                 : 'Falha ao carregar dados fictícios.';
             setError(`${errorMessage} Detalhe: ${err.message}`);
