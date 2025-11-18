@@ -45,8 +45,10 @@ const VeiculoModal: React.FC<{
     };
 
     const toggleManualType = () => {
-        setIsManualType(!isManualType);
-        // Opcional: Limpar o campo ao trocar de modo para forçar uma escolha consciente
+        const novoModo = !isManualType;
+        setIsManualType(novoModo);
+        // Se mudar para modo manual, limpa o campo para o usuário digitar
+        // Se voltar para lista, limpa também para forçar seleção
         setFormData({ ...formData, TipoVeiculo: '' });
     };
 
@@ -89,7 +91,7 @@ const VeiculoModal: React.FC<{
                                         value={formData.TipoVeiculo} 
                                         onChange={handleChange} 
                                         className="w-full bg-slate-700 text-white border border-slate-600 rounded-md p-2 focus:ring-sky-500 focus:border-sky-500 animate-pulse-once"
-                                        placeholder="Digite novo tipo..." 
+                                        placeholder="Digite novo tipo (Ex: VUC)" 
                                         autoFocus
                                     />
                                 ) : (
@@ -109,12 +111,13 @@ const VeiculoModal: React.FC<{
                                 <button 
                                     type="button"
                                     onClick={toggleManualType}
-                                    className={`p-2 rounded-md transition-colors ${isManualType ? 'bg-slate-600 hover:bg-slate-500 text-white' : 'bg-sky-600 hover:bg-sky-500 text-white'}`}
-                                    title={isManualType ? "Voltar para lista" : "Cadastrar novo tipo"}
+                                    className={`p-2 rounded-md transition-colors border ${isManualType ? 'bg-slate-600 hover:bg-slate-500 text-white border-slate-500' : 'bg-sky-600 hover:bg-sky-500 text-white border-sky-500'}`}
+                                    title={isManualType ? "Cancelar e voltar para lista" : "Adicionar novo tipo manualmente"}
                                 >
                                     {isManualType ? <XCircleIcon className="w-5 h-5"/> : <PlusCircleIcon className="w-5 h-5"/>}
                                 </button>
                             </div>
+                            {isManualType && <p className="text-xs text-sky-400 mt-1">Digite o novo tipo para cadastrá-lo.</p>}
                         </div>
                         <div>
                             <label htmlFor="CapacidadeKG" className="block text-sm font-medium text-slate-300 mb-1">Capacidade (KG)</label>

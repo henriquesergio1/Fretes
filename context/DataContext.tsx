@@ -86,12 +86,19 @@ export const DataProvider: React.FC<{children: ReactNode}> = ({ children }) => {
     }, [loadInitialData]);
 
     useEffect(() => {
-        const allTipos = [...new Set(veiculos.map(v => v.TipoVeiculo))].sort();
+        // Agrega tipos de veículos da frota E dos parâmetros de valores
+        // Isso permite que um tipo exista nos parâmetros mesmo sem veículo, e vice-versa.
+        const allTipos = [...new Set([
+            ...veiculos.map(v => v.TipoVeiculo),
+            ...parametrosValores.map(p => p.TipoVeiculo)
+        ])].filter(Boolean).sort();
+
         const allCidades = [...new Set([
             ...cargas.map(c => c.Cidade),
             ...parametrosValores.map(p => p.Cidade),
             ...parametrosTaxas.map(t => t.Cidade)
         ])].filter(Boolean).sort();
+        
         setTiposVeiculo(allTipos);
         setCidades(allCidades);
     }, [veiculos, cargas, parametrosValores, parametrosTaxas]);
