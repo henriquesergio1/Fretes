@@ -2,7 +2,7 @@
 
 // Mude esta variável para 'api' para usar o backend real.
 // Mude para 'mock' para usar os dados fictícios para desenvolvimento da interface.
-export const API_MODE: 'api' | 'mock' = 'mock';
+export const API_MODE: 'api' | 'mock' = 'api';
 
 // URL base para o backend. Só é usada quando API_MODE é 'api'.
 // Em produção com Docker Compose, usamos o nome do serviço ('fretes-api') como hostname.
