@@ -4,7 +4,7 @@ services:
   fretes-api:
     build:
       context: ./api
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.txt
     container_name: fretes-api
     restart: unless-stopped
     ports:
@@ -28,7 +28,7 @@ services:
   fretes-frontend:
     build:
       context: . # Constrói a imagem a partir da raiz do projeto
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.txt
     container_name: fretes-frontend
     restart: unless-stopped
     ports:

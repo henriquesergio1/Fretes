@@ -1,0 +1,17 @@
+# Estágio 1: Build (não necessário para este projeto estático)
+
+# Estágio 2: Produção
+FROM nginx:alpine
+
+# Copia o arquivo de configuração personalizado do Nginx para a imagem.
+# O nome do arquivo no container deve ser default.conf para sobrescrever a configuração padrão.
+COPY nginx.conf.txt /etc/nginx/conf.d/default.conf
+
+# Copia todos os arquivos da aplicação (HTML, TSX, JS, etc.) para o diretório web do Nginx.
+COPY . /usr/share/nginx/html
+
+# Expõe a porta 80, que é a porta padrão do Nginx.
+EXPOSE 80
+
+# Comando para iniciar o Nginx quando o container for executado.
+CMD ["nginx", "-g", "daemon off;"]

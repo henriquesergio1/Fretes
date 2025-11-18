@@ -1,0 +1,26 @@
+server {
+    listen 80;
+    server_name localhost;
+
+    # Define o diretório raiz onde os arquivos do site estão localizados.
+    root /usr/share/nginx/html;
+
+    # Define o arquivo de índice padrão.
+    index index.html;
+
+    # Configuração para servir os arquivos estáticos.
+    location / {
+        # Tenta servir o arquivo solicitado diretamente.
+        # Se não encontrar, tenta servir um diretório com o mesmo nome.
+        # Se falhar, redireciona a requisição para /index.html.
+        # Isso é crucial para que o roteamento do lado do cliente (React Router) funcione.
+        try_files $uri $uri/ /index.html;
+    }
+
+    # Adiciona headers para evitar problemas de cache durante o desenvolvimento (opcional).
+    location ~* \.(?:html|js|css)$ {
+        add_header Cache-Control "no-cache, no-store, must-revalidate";
+        add_header Pragma "no-cache";
+        add_header Expires "0";
+    }
+}
