@@ -1,13 +1,13 @@
 import React, { useState, useContext } from 'react';
-import { LancamentoFrete } from './components/LancamentoFrete';
-import { Dashboard } from './components/Dashboard';
-import { Relatorios } from './components/Relatorios';
-import { Importacao } from './components/Importacao';
-import { GestaoVeiculos } from './components/GestaoVeiculos';
-import { GestaoParametros } from './components/GestaoParametros';
-import { GestaoCargas } from './components/GestaoCargas';
-import { DataProvider, DataContext } from './context/DataContext';
-import { ChartBarIcon, CogIcon, PlusCircleIcon, TruckIcon, DocumentReportIcon, CloudUploadIcon, BoxIcon, SpinnerIcon, XCircleIcon, ChevronDoubleLeftIcon, ChevronDoubleRightIcon } from './components/icons';
+import { LancamentoFrete } from './components/LancamentoFrete.tsx';
+import { Dashboard } from './components/Dashboard.tsx';
+import { Relatorios } from './components/Relatorios.tsx';
+import { Importacao } from './components/Importacao.tsx';
+import { GestaoVeiculos } from './components/GestaoVeiculos.tsx';
+import { GestaoParametros } from './components/GestaoParametros.tsx';
+import { GestaoCargas } from './components/GestaoCargas.tsx';
+import { DataProvider, DataContext } from './context/DataContext.tsx';
+import { ChartBarIcon, CogIcon, PlusCircleIcon, TruckIcon, DocumentReportIcon, CloudUploadIcon, BoxIcon, SpinnerIcon, XCircleIcon, ChevronDoubleLeftIcon, ChevronDoubleRightIcon } from './components/icons.tsx';
 
 type View = 'dashboard' | 'lancamento' | 'veiculos' | 'cargas' | 'parametros' | 'relatorios' | 'importacao';
 

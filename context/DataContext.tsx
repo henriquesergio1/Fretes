@@ -1,7 +1,7 @@
 import React, { createContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import { Veiculo, ParametroValor, ParametroTaxa, Carga, Lancamento, NewLancamento } from '../types';
-import * as api from '../services/apiService';
-import { API_MODE } from '../api.config';
+import { Veiculo, ParametroValor, ParametroTaxa, Carga, Lancamento, NewLancamento } from '../types.ts';
+import * as api from '../services/apiService.ts';
+import { API_MODE } from '../api.config.ts';
 
 interface DataContextType {
     veiculos: Veiculo[];

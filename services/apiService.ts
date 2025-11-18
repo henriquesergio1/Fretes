@@ -1,6 +1,6 @@
-import { Veiculo, Carga, ParametroValor, ParametroTaxa, MotivoSubstituicao, Lancamento, NewLancamento } from '../types';
-import { API_MODE, API_URL } from '../api.config';
-import * as mockApi from '../api/mockData';
+import { Veiculo, Carga, ParametroValor, ParametroTaxa, MotivoSubstituicao, Lancamento, NewLancamento } from '../types.ts';
+import { API_MODE, API_URL } from '../api.config.ts';
+import * as mockApi from '../api/mockData.ts';
 import Papa from 'papaparse';
 
 // --- API REAL (usada quando API_MODE = 'api') ---

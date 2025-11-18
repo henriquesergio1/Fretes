@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useContext, useEffect } from 'react';
-import { Carga } from '../types';
-import { DataContext } from '../context/DataContext';
-import { PlusCircleIcon, PencilIcon, XCircleIcon, TrashIcon, ChevronUpIcon, ChevronDownIcon, ExclamationIcon } from './icons';
+import { Carga } from '../types.ts';
+import { DataContext } from '../context/DataContext.tsx';
+import { PlusCircleIcon, PencilIcon, XCircleIcon, TrashIcon, ChevronUpIcon, ChevronDownIcon, ExclamationIcon } from './icons.tsx';
 
 // --- Tag Component for Carga Origin ---
 const OrigemTag: React.FC<{ origem?: 'ERP' | 'CSV' | 'Manual' }> = ({ origem }) => {

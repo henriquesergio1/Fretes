@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useContext, useEffect } from 'react';
-import { Veiculo } from '../types';
-import { DataContext } from '../context/DataContext';
-import { PlusCircleIcon, PencilIcon, XCircleIcon } from './icons';
+import { Veiculo } from '../types.ts';
+import { DataContext } from '../context/DataContext.tsx';
+import { PlusCircleIcon, PencilIcon, XCircleIcon } from './icons.tsx';
 
 // --- Modal Component for Editing/Creating Vehicles ---
 const VeiculoModal: React.FC<{

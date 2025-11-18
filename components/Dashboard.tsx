@@ -1,6 +1,6 @@
 import React, { useContext, useMemo, useState } from 'react';
-import { ChartBarIcon, TruckIcon, ExclamationIcon } from './icons';
-import { DataContext } from '../context/DataContext';
+import { ChartBarIcon, TruckIcon, ExclamationIcon } from './icons.tsx';
+import { DataContext } from '../context/DataContext.tsx';
 
 // Reusable components for the page
 const MetricCard: React.FC<{ title: string; value: string; icon: React.ReactNode; description: string; valueColor?: string }> = ({ title, value, icon, description, valueColor = 'text-white' }) => (

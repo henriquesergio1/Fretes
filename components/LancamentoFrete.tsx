@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo, useCallback, useContext } from 'react';
-import { Veiculo, Carga, Lancamento, MotivoSubstituicao, NewLancamento } from '../types';
-import * as api from '../services/apiService';
-import { DataContext } from '../context/DataContext';
-import { ArrowLeftIcon, ArrowRightIcon, CheckCircleIcon, ExclamationIcon, SpinnerIcon, XCircleIcon } from './icons';
+import { Veiculo, Carga, Lancamento, MotivoSubstituicao, NewLancamento } from '../types.ts';
+import * as api from '../services/apiService.ts';
+import { DataContext } from '../context/DataContext.tsx';
+import { ArrowLeftIcon, ArrowRightIcon, CheckCircleIcon, ExclamationIcon, SpinnerIcon, XCircleIcon } from './icons.tsx';
 
 interface LancamentoFreteProps {
     setView: (view: 'relatorios') => void;

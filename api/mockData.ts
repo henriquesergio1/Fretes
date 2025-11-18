@@ -1,4 +1,4 @@
-import { Veiculo, Carga, ParametroValor, ParametroTaxa, MotivoSubstituicao, Lancamento, NewLancamento } from '../types';
+import { Veiculo, Carga, ParametroValor, ParametroTaxa, MotivoSubstituicao, Lancamento, NewLancamento } from '../types.ts';
 
 // --- MOCK DATA ---
 // Simula o estado do banco de dados para desenvolvimento offline.

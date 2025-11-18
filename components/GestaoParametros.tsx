@@ -1,7 +1,7 @@
 import React, { useState, useContext, useEffect, useMemo } from 'react';
-import { DataContext } from '../context/DataContext';
-import { ParametroValor, ParametroTaxa } from '../types';
-import { PlusCircleIcon, PencilIcon, XCircleIcon, TrashIcon, ChevronUpIcon, ChevronDownIcon } from './icons';
+import { DataContext } from '../context/DataContext.tsx';
+import { ParametroValor, ParametroTaxa } from '../types.ts';
+import { PlusCircleIcon, PencilIcon, XCircleIcon, TrashIcon, ChevronUpIcon, ChevronDownIcon } from './icons.tsx';
 
 // --- Reusable Card Component ---
 const ParametroCard: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (

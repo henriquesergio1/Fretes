@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useContext, useEffect } from 'react';
-import { DataContext } from '../context/DataContext';
-import { Lancamento, Veiculo } from '../types';
-import { PencilIcon, ChevronDownIcon, ChevronUpIcon, TrashIcon, ExclamationIcon } from './icons';
+import { DataContext } from '../context/DataContext.tsx';
+import { Lancamento, Veiculo } from '../types.ts';
+import { PencilIcon, ChevronDownIcon, ChevronUpIcon, TrashIcon, ExclamationIcon } from './icons.tsx';
 
 interface RelatoriosProps {
     setView: (view: 'lancamento') => void;

@@ -6,4 +6,5 @@ export const API_MODE: 'api' | 'mock' = 'mock';
 
 // URL base para o backend. Só é usada quando API_MODE é 'api'.
 // Em produção com Docker Compose, usamos o nome do serviço ('fretes-api') como hostname.
+// Para desenvolvimento local com a API rodando, use 'http://localhost:3030' (ou a porta que você mapeou).
 export const API_URL = 'http://fretes-api:3000';

@@ -1,7 +1,7 @@
 import React, { useState, useContext, ChangeEvent } from 'react';
-import { DataContext } from '../context/DataContext';
-import * as api from '../services/apiService';
-import { CloudUploadIcon, CheckCircleIcon, XCircleIcon, SpinnerIcon, TruckIcon } from './icons';
+import { DataContext } from '../context/DataContext.tsx';
+import * as api from '../services/apiService.ts';
+import { CloudUploadIcon, CheckCircleIcon, XCircleIcon, SpinnerIcon, TruckIcon } from './icons.tsx';
 
 type ImportType = 'veiculos' | 'cargas' | 'parametros-valores' | 'parametros-taxas';
 

@@ -3,22 +3,17 @@ FROM node:18-alpine AS builder
 
 WORKDIR /app
 
-# Instala as dependências de build, incluindo react e react-dom
-# O esbuild precisa delas para resolver os imports corretamente.
-RUN npm install esbuild tailwindcss papaparse react react-dom
+# Copia o package.json e o package-lock.json (se existir)
+COPY package*.json ./
 
-# Copia os arquivos de configuração e código-fonte
+# Instala as dependências
+RUN npm install
+
+# Copia o resto dos arquivos do projeto
 COPY . .
 
-# Garante que o diretório de saída exista
-RUN mkdir -p dist
-
-# Compila o CSS com Tailwind usando npx, que resolve o caminho do executável
-# A flag --minify é adicionada para produção
-RUN npx tailwindcss -i ./tailwind-input.css -o ./dist/output.css --minify
-
-# Compila e agrupa o TypeScript/React com esbuild usando npx
-RUN npx esbuild index.tsx --bundle --outfile=dist/bundle.js --minify --loader:.tsx=tsx
+# Executa o build (os scripts no package.json criarão o diretório dist)
+RUN npm run build
 
 # ===== Estágio 2: Produção =====
 FROM nginx:alpine
