@@ -4,11 +4,32 @@ import * as mockApi from '../api/mockData.ts';
 import Papa from 'papaparse';
 
 // --- CONFIGURAÇÃO E AUDITORIA ---
-const API_MODE = process.env.API_MODE;
-const API_URL = process.env.API_URL;
 
-console.log(`%c[SISTEMA] Iniciando em modo: ${API_MODE?.toUpperCase()}`, 'background: #222; color: #bada55; padding: 4px; font-weight: bold;');
-console.log(`[SISTEMA] URL da API: ${API_URL}`);
+// Lógica de Fallback: Se as variáveis de ambiente não forem injetadas corretamente pelo build,
+// usamos valores padrão baseados no ambiente provável (localhost vs produção).
+const getEnvMode = () => {
+    if (process.env.API_MODE !== undefined) return process.env.API_MODE;
+    // Se estiver undefined, verifica se é localhost (desenvolvimento) ou não
+    if (typeof window !== 'undefined' && window.location.hostname === 'localhost' && window.location.port !== '8080') {
+        return 'mock';
+    }
+    return 'api'; // Padrão seguro: Produção
+};
+
+const getEnvUrl = () => {
+    if (process.env.API_URL !== undefined) return process.env.API_URL;
+    if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
+        return 'http://localhost:3030';
+    }
+    return 'http://fretes-api:3000';
+};
+
+const API_MODE = getEnvMode();
+const API_URL = getEnvUrl();
+
+console.log(`%c[SISTEMA] Configuração Carregada`, 'background: #333; color: #fff; padding: 4px; font-weight: bold;');
+console.log(`> Modo: ${API_MODE?.toUpperCase()}`);
+console.log(`> URL: ${API_URL}`);
 
 // --- UTILITÁRIOS ---
 
@@ -177,8 +198,6 @@ const MockService = {
 // SELEÇÃO DE IMPLEMENTAÇÃO
 // =============================================================================
 
-// Lógica estrita: Se não for explicitamente 'mock', assume 'api' (RealService).
-// Isso evita que um valor undefined ou incorreto caia no modo mock em produção.
 const isMockMode = API_MODE === 'mock';
 const SelectedService = isMockMode ? MockService : RealService;
 
