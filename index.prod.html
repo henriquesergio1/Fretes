@@ -1,8 +1,12 @@
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="0" />
 <title>Fretes</title>
 <script>
   // CONFIGURAÇÃO DE AMBIENTE - PRODUÇÃO
@@ -11,10 +15,10 @@
     mode: 'api',
     apiUrl: '/api' 
   };
-  console.log('[ENV] Produção Docker carregado. API apontando para: /api');
+  console.warn('🚀 [ENV] MODO PRODUÇÃO ATIVADO. Configuração injetada:', window.APP_CONFIG);
 </script>
-<!-- Adicionado parametro de versao para evitar cache antigo do navegador -->
-<link href="/dist/output.css?v=docker-fix-1" rel="stylesheet">
+<!-- Cache busting na URL do CSS -->
+<link href="/dist/output.css?v=docker-prod-v2" rel="stylesheet">
 <style>
 /* Custom scrollbar for better aesthetics */
 ::-webkit-scrollbar {
@@ -35,6 +39,7 @@
 </head>
 <body class="bg-slate-900 text-slate-100">
 <div id="root"></div>
-<script type="module" src="/dist/bundle.js?v=docker-fix-1"></script>
+<!-- Cache busting na URL do JS -->
+<script type="module" src="/dist/bundle.js?v=docker-prod-v2"></script>
 </body>
 </html>

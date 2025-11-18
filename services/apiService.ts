@@ -19,9 +19,12 @@ const getConfig = () => {
     if (typeof window !== 'undefined' && window.APP_CONFIG) {
         return window.APP_CONFIG;
     }
-    // Fallback seguro apenas se window.APP_CONFIG não existir
-    console.warn("[API] Configuração não encontrada, usando fallback MOCK.");
-    return { mode: 'mock', apiUrl: 'http://localhost:3030' };
+    
+    // MUDANÇA CRÍTICA: O padrão agora é PRODUÇÃO (API)
+    // Se a config não existir (erro de injeção ou cache), tentamos bater na API via proxy.
+    // Isso previne que o Docker caia silenciosamente em modo Mock.
+    console.warn("[API] Configuração global não detectada. Assumindo ambiente de PRODUÇÃO (Proxy Nginx).");
+    return { mode: 'api', apiUrl: '/api' };
 };
 
 // Helper para logs (opcional, pode ser removido em prod final)
@@ -174,9 +177,10 @@ const getService = () => {
     const config = getConfig();
     // Log simples na primeira chamada para debug
     if (!(window as any).hasLoggedApiMode) {
-        console.log(`[API Service] Inicializado em modo: ${config.mode}, URL: ${config.apiUrl}`);
+        console.log(`[API Service] Inicializado em modo: ${config.mode?.toUpperCase()}, URL: ${config.apiUrl}`);
         (window as any).hasLoggedApiMode = true;
     }
+    // Só usa o MockService se EXPLICITAMENTE configurado como 'mock'
     return config.mode === 'mock' ? MockService : RealService;
 };
 

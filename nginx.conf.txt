@@ -1,3 +1,4 @@
+
 server {
     listen 80;
     server_name localhost;
@@ -8,8 +9,14 @@ server {
     root /usr/share/nginx/html;
     index index.html;
 
+    # Desativa cache para o index.html para evitar configurações antigas
+    location = /index.html {
+        add_header Cache-Control "no-store, no-cache, must-revalidate";
+        expires 0;
+    }
+
     # Configuração do Proxy Reverso para a API
-    # O navegador chama http://localhost:8080/api/veiculos
+    # O navegador chama http://[IP]:8080/api/veiculos
     # O Nginx reescreve para http://fretes-api:3000/veiculos
     location /api/ {
         rewrite ^/api/(.*) /$1 break;
