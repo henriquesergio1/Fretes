@@ -1,22 +1,22 @@
-
 import { Veiculo, Carga, ParametroValor, ParametroTaxa, MotivoSubstituicao, Lancamento, NewLancamento } from '../types.ts';
 import * as mockApi from '../api/mockData.ts';
 import Papa from 'papaparse';
 
-// Declaração para o TypeScript entender a variável injetada pelo esbuild
-declare const __USE_MOCK__: boolean;
-
 // =============================================================================
-// CONFIGURAÇÃO DE MODO (SIMPLES E DIRETA)
+// CONFIGURAÇÃO DE MODO (DEFINITIVA)
 // =============================================================================
 
-// Se __USE_MOCK__ não estiver definido (ex: erro no build), assume false para segurança em prod.
-// No script 'dev' do package.json, isso é true. No 'build:prod', é false.
-const USE_MOCK = (typeof __USE_MOCK__ !== 'undefined') ? __USE_MOCK__ : false;
+// A variável process.env.IS_MOCK é substituída por uma string ('true' ou 'false')
+// durante o build pelo esbuild (veja package.json).
+// Se por algum motivo não for substituída (ex: IDE), assume false (Produção) por segurança.
+const IS_MOCK_ENV = process.env.IS_MOCK;
+const USE_MOCK = IS_MOCK_ENV === 'true';
 
 const API_BASE_URL = '/api';
 
-console.log(`[API SERVICE] Inicializado. Modo Mock Ativo: ${USE_MOCK}`);
+console.log(`[API SERVICE] Inicializado.`);
+console.log(`[API SERVICE] Configuração de Build (IS_MOCK): ${IS_MOCK_ENV}`);
+console.log(`[API SERVICE] Modo Ativo Final: ${USE_MOCK ? 'MOCK (Dados Falsos)' : 'API REAL (Backend)'}`);
 
 // =============================================================================
 // UTILITÁRIOS API REAL
@@ -168,12 +168,8 @@ const MockService = {
 };
 
 // =============================================================================
-// EXPORTAÇÕES - DEFINIDAS NO MOMENTO DO BUILD
+// EXPORTAÇÕES
 // =============================================================================
-
-// O esbuild substituirá USE_MOCK por true ou false durante a compilação.
-// Se for false (Produção), o código do MockService será removido (Tree Shaking)
-// ou o ternário será resolvido estaticamente para RealService.
 
 export const getVeiculos = USE_MOCK ? MockService.getVeiculos : RealService.getVeiculos;
 export const getCargas = USE_MOCK ? MockService.getCargas : RealService.getCargas;
