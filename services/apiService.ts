@@ -117,8 +117,21 @@ const RealService = {
     getCargas: async (params?: { veiculoCod?: string, data?: string }): Promise<Carga[]> => {
         let cargas: Carga[] = await apiGet('/cargas-manuais');
         if (params) {
-            if (params.data) cargas = cargas.filter(c => c.DataCTE === params.data);
-            if (params.veiculoCod) cargas = cargas.filter(c => c.COD_VEICULO === params.veiculoCod);
+            if (params.data) {
+                // CORREÇÃO: Normalizar a data vinda do banco (remove T00:00:00.000Z se existir)
+                cargas = cargas.filter(c => {
+                    if (!c.DataCTE) return false;
+                    const dbDate = String(c.DataCTE).split('T')[0];
+                    return dbDate === params.data;
+                });
+            }
+            if (params.veiculoCod) {
+                // CORREÇÃO: Normalizar espaços e case para garantir match (ex: "69 " == "69")
+                const targetCod = String(params.veiculoCod).trim().toUpperCase();
+                cargas = cargas.filter(c => 
+                    String(c.COD_VEICULO).trim().toUpperCase() === targetCod
+                );
+            }
         }
         return cargas.filter(c => !c.Excluido);
     },
@@ -260,8 +273,8 @@ const MockService = {
                     ],
                     conflicts: [
                         {
-                            local: { ID_Veiculo: 1, COD_Veiculo: 'TRUCK001', Placa: 'ABC-1234', TipoVeiculo: 'Carreta', Motorista: 'João da Silva', CapacidadeKG: 25000, Ativo: true },
-                            erp: { ID_Veiculo: 0, COD_Veiculo: 'TRUCK001', Placa: 'ABC-1234', TipoVeiculo: 'Carreta ERP', Motorista: 'João Atualizado ERP', CapacidadeKG: 26000, Ativo: true },
+                            local: { ID_Veiculo: 1, COD_Veiculo: 'TRUCK001', Placa: 'ABC-1234', TipoVeiculo: 'Carreta', Motorista: 'João da Silva', CapacidadeKG: 25000, Ativo: true, Origem: 'ERP' },
+                            erp: { ID_Veiculo: 0, COD_Veiculo: 'TRUCK001', Placa: 'ABC-1234', TipoVeiculo: 'Carreta ERP', Motorista: 'João Atualizado ERP', CapacidadeKG: 26000, Ativo: true, Origem: 'ERP' },
                             action: 'skip'
                         }
                     ],
