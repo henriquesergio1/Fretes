@@ -1,4 +1,5 @@
 
+
 import { Veiculo, Carga, ParametroValor, ParametroTaxa, MotivoSubstituicao, Lancamento, NewLancamento, VehicleCheckResult, VehicleConflict, CargaCheckResult, CargaReactivation, Usuario, AuthResponse } from '../types.ts';
 import * as mockApi from '../api/mockData.ts';
 import Papa from 'papaparse';
@@ -64,7 +65,7 @@ const apiRequest = async (endpoint: string, method: 'POST' | 'PUT' | 'DELETE', b
     const cleanEndpoint = endpoint.replace(/^\//, '');
     const url = `${cleanUrl}/${cleanEndpoint}`;
     
-    const headers: HeadersInit = { 'Content-Type': 'application/json' };
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
     const token = getToken();
     if (token) headers['Authorization'] = `Bearer ${token}`;
 
@@ -84,7 +85,7 @@ const apiGet = async (endpoint: string) => {
     const cleanEndpoint = endpoint.replace(/^\//, '');
     const url = `${cleanUrl}/${cleanEndpoint}`;
 
-    const headers: HeadersInit = {};
+    const headers: Record<string, string> = {};
     const token = getToken();
     if (token) headers['Authorization'] = `Bearer ${token}`;
 

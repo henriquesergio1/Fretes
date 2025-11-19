@@ -54,6 +54,40 @@ function executeQuery(config, query, params = []) {
   });
 }
 
+// --- Função de Normalização de Chaves (Resolver problemas de Case Sensitivity do Banco) ---
+const normalizeKeys = (obj) => {
+    const newObj = {};
+    Object.keys(obj).forEach(key => {
+        const k = key.toUpperCase();
+        // Mapeamento Veículos
+        if (k === 'ID_VEICULO') newObj['ID_Veiculo'] = obj[key];
+        else if (k === 'COD_VEICULO') newObj['COD_Veiculo'] = obj[key];
+        else if (k === 'PLACA') newObj['Placa'] = obj[key];
+        else if (k === 'TIPOVEICULO') newObj['TipoVeiculo'] = obj[key];
+        else if (k === 'MOTORISTA') newObj['Motorista'] = obj[key];
+        else if (k === 'CAPACIDADEKG') newObj['CapacidadeKG'] = obj[key];
+        else if (k === 'ATIVO') newObj['Ativo'] = obj[key];
+        else if (k === 'ORIGEM') newObj['Origem'] = obj[key];
+        else if (k === 'USUARIOCRIACAO') newObj['UsuarioCriacao'] = obj[key];
+        else if (k === 'USUARIOALTERACAO') newObj['UsuarioAlteracao'] = obj[key];
+        
+        // Mapeamento Cargas
+        else if (k === 'ID_CARGA') newObj['ID_Carga'] = obj[key];
+        else if (k === 'NUMEROCARGA') newObj['NumeroCarga'] = obj[key];
+        else if (k === 'CIDADE') newObj['Cidade'] = obj[key];
+        else if (k === 'VALORCTE') newObj['ValorCTE'] = obj[key];
+        else if (k === 'DATACTE') newObj['DataCTE'] = obj[key];
+        else if (k === 'KM') newObj['KM'] = obj[key];
+        else if (k === 'EXCLUIDO') newObj['Excluido'] = obj[key];
+        else if (k === 'MOTIVOEXCLUSAO') newObj['MotivoExclusao'] = obj[key];
+        else if (k === 'MOTIVOALTERACAO') newObj['MotivoAlteracao'] = obj[key];
+        
+        // Fallback: mantem original se não encontrar mapeamento
+        else newObj[key] = obj[key];
+    });
+    return newObj;
+};
+
 // --- Middleware de Autenticação ---
 const authenticateToken = (req, res, next) => {
     const authHeader = req.headers['authorization'];
@@ -158,10 +192,18 @@ app.put('/usuarios/:id', authenticateToken, async (req, res) => {
 // VEÍCULOS
 app.get('/veiculos', authenticateToken, async (req, res) => {
     try { 
-        // Definição explícita de colunas para garantir casing correto e evitar propriedades undefined no frontend
-        const query = 'SELECT ID_Veiculo, COD_Veiculo, Placa, TipoVeiculo, Motorista, CapacidadeKG, Ativo, Origem, UsuarioCriacao, UsuarioAlteracao FROM Veiculos ORDER BY Ativo DESC, Placa ASC';
+        // Usa SELECT * mas normaliza no retorno para garantir que o casing (maiúscula/minúscula) 
+        // bata com o que o Frontend espera (ex: PLACA -> Placa)
+        const query = 'SELECT * FROM Veiculos ORDER BY Ativo DESC, Placa ASC';
         const { rows } = await executeQuery(configOdin, query); 
-        res.json(rows); 
+        const normalizedRows = rows.map(normalizeKeys);
+        
+        // Log de debug para ajudar a identificar o que o banco está retornando
+        if (normalizedRows.length > 0) {
+            console.log('[DEBUG API] Exemplo de Veículo Normalizado:', normalizedRows[0]);
+        }
+
+        res.json(normalizedRows); 
     } catch (error) { res.status(500).json({ message: error.message }); }
 });
 app.post('/veiculos', authenticateToken, async (req, res) => {
@@ -174,7 +216,7 @@ app.post('/veiculos', authenticateToken, async (req, res) => {
         {name:'cap',type:TYPES.Int,value:v.CapacidadeKG}, {name:'ativo',type:TYPES.Bit,value:v.Ativo}, 
         {name:'origem',type:TYPES.NVarChar,value:v.Origem||'Manual'}, {name:'user',type:TYPES.NVarChar,value:u.usuario}
     ];
-    try { const { rows } = await executeQuery(configOdin, query, params); res.status(201).json(rows[0]); } catch (e) { res.status(500).json({ message: e.message }); }
+    try { const { rows } = await executeQuery(configOdin, query, params); res.status(201).json(normalizeKeys(rows[0])); } catch (e) { res.status(500).json({ message: e.message }); }
 });
 app.put('/veiculos/:id', authenticateToken, async (req, res) => {
     const v = req.body;
@@ -186,7 +228,7 @@ app.put('/veiculos/:id', authenticateToken, async (req, res) => {
         {name:'mot',type:TYPES.NVarChar,value:v.Motorista}, {name:'cap',type:TYPES.Int,value:v.CapacidadeKG}, 
         {name:'ativo',type:TYPES.Bit,value:v.Ativo}, {name:'user',type:TYPES.NVarChar,value:u.usuario}
     ];
-    try { const { rows } = await executeQuery(configOdin, query, params); res.json(rows[0]); } catch (e) { res.status(500).json({ message: e.message }); }
+    try { const { rows } = await executeQuery(configOdin, query, params); res.json(normalizeKeys(rows[0])); } catch (e) { res.status(500).json({ message: e.message }); }
 });
 
 // VEÍCULOS ERP
@@ -200,7 +242,7 @@ app.get('/veiculos-erp/check', authenticateToken, async (req, res) => {
         erpV.forEach(e => {
             const cod = String(e.COD_VEICULO).trim().toUpperCase();
             const norm = { COD_Veiculo: cod, Placa: String(e.PLACA||'').trim().toUpperCase(), TipoVeiculo: String(e.TIPO||'PADRÃO').trim(), Motorista: String(e.MOTORISTA||'N/A').trim(), CapacidadeKG: Number(e.CAPACIDADE_KG)||0, Ativo: e.STATUS_ATIVO==='Ativo', Origem:'ERP' };
-            if(localMap.has(cod)) conflicts.push({local: localMap.get(cod), erp: norm, action: 'skip'}); else newV.push(norm);
+            if(localMap.has(cod)) conflicts.push({local: normalizeKeys(localMap.get(cod)), erp: norm, action: 'skip'}); else newV.push(norm);
         });
         res.json({ newVehicles: newV, conflicts, message: 'Check OK' });
     } catch(e) { res.status(500).json({ message: e.message }); }
@@ -230,7 +272,10 @@ app.post('/veiculos-erp/sync', authenticateToken, async (req, res) => {
 
 // CARGAS
 app.get('/cargas-manuais', authenticateToken, async (req, res) => {
-    try { const { rows } = await executeQuery(configOdin, 'SELECT * FROM CargasManuais ORDER BY DataCTE DESC'); res.json(rows); } catch (e) { res.status(500).json({ message: e.message }); }
+    try { 
+        const { rows } = await executeQuery(configOdin, 'SELECT * FROM CargasManuais ORDER BY DataCTE DESC'); 
+        res.json(rows.map(normalizeKeys)); 
+    } catch (e) { res.status(500).json({ message: e.message }); }
 });
 app.post('/cargas-manuais', authenticateToken, async (req, res) => {
     const c = req.body;
@@ -242,7 +287,7 @@ app.post('/cargas-manuais', authenticateToken, async (req, res) => {
         {name:'k',type:TYPES.Int,value:c.KM}, {name:'cv',type:TYPES.NVarChar,value:c.COD_VEICULO}, 
         {name:'o',type:TYPES.NVarChar,value:c.Origem||'Manual'}, {name:'u',type:TYPES.NVarChar,value:u.usuario}
     ];
-    try { const { rows } = await executeQuery(configOdin, q, p); res.status(201).json(rows[0]); } catch (e) { res.status(500).json({ message: e.message }); }
+    try { const { rows } = await executeQuery(configOdin, q, p); res.status(201).json(normalizeKeys(rows[0])); } catch (e) { res.status(500).json({ message: e.message }); }
 });
 app.put('/cargas-manuais/:id', authenticateToken, async (req, res) => {
     const c = req.body;
@@ -263,7 +308,7 @@ app.put('/cargas-manuais/:id', authenticateToken, async (req, res) => {
             {name:'u',type:TYPES.NVarChar,value:user.usuario}
         ];
     }
-    try { const { rows } = await executeQuery(configOdin, q, p); res.json(rows[0]); } catch (e) { res.status(500).json({ message: e.message }); }
+    try { const { rows } = await executeQuery(configOdin, q, p); res.json(normalizeKeys(rows[0])); } catch (e) { res.status(500).json({ message: e.message }); }
 });
 
 // CARGAS ERP
@@ -282,7 +327,7 @@ app.post('/cargas-erp/check', authenticateToken, async (req, res) => {
             if (agg.has(key)) agg.get(key).ValorCTE += obj.ValorCTE; else agg.set(key, obj);
         });
         const { rows: localC } = await executeQuery(configOdin, "SELECT NumeroCarga, Cidade, Excluido, MotivoExclusao FROM CargasManuais WHERE Origem='ERP'");
-        const localMap = new Map(localC.map(c => [`${c.NumeroCarga}|${c.Cidade}`, c]));
+        const localMap = new Map(localC.map(c => [`${c.NumeroCarga}|${c.Cidade}`, normalizeKeys(c)]));
         const { rows: vs } = await executeQuery(configOdin, 'SELECT COD_Veiculo FROM Veiculos');
         const vSet = new Set(vs.map(v => v.COD_Veiculo.trim().toUpperCase()));
         
@@ -349,7 +394,7 @@ app.get('/lancamentos', authenticateToken, async (req, res) => {
             l.Cargas = cs.map(c => ({ ID_Carga: c.ID_Carga_Origem, NumeroCarga: c.NumeroCarga, Cidade: c.Cidade, ValorCTE: c.ValorCTE, DataCTE: c.DataCTE.toISOString().split('T')[0], KM: c.KM, COD_VEICULO: c.COD_VEICULO }));
             l.Calculo = { CidadeBase: l.CidadeBase, KMBase: l.KMBase, ValorBase: l.ValorBase, Pedagio: l.Pedagio, Balsa: l.Balsa, Ambiental: l.Ambiental, Chapa: l.Chapa, Outras: l.Outras, ValorTotal: l.ValorTotal };
         }
-        res.json(ls);
+        res.json(ls); // Lancamentos geralmente retornam camelCase do driver, se der problema, aplicar normalize tb
     } catch (e) { res.status(500).json({ message: e.message }); }
 });
 
