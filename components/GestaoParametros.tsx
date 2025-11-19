@@ -347,10 +347,20 @@ const GestaoParametrosValores: React.FC = () => {
                     <tbody>
                         {sortedAndFilteredParams.map(p => (
                              <tr key={p.ID_Parametro} className="border-b border-slate-700">
-                                <td className="p-2">{p.Cidade}</td><td className="p-2">{p.TipoVeiculo}</td><td className="p-2">{p.ValorBase.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}</td>
-                                <td className="p-2 flex gap-2">
-                                     <button onClick={() => handleOpenModalForEdit(p)} className="text-sky-400 hover:text-sky-300"><PencilIcon className="w-5 h-5"/></button>
-                                     <button onClick={() => handleDeleteClick(p)} className="text-red-400 hover:text-red-300"><TrashIcon className="w-5 h-5"/></button>
+                                <td className="p-2">{p.Cidade}</td><td className="p-2">{p.TipoVeiculo}</td>
+                                <td className="p-2">
+                                    <div className="flex items-center whitespace-nowrap">
+                                        {p.ValorBase.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}
+                                        {p.MotivoAlteracao && (
+                                            <span title={`Última alteração: ${p.MotivoAlteracao}`} className="ml-2 text-[10px] text-yellow-500 cursor-help border border-yellow-500/50 rounded px-1 uppercase">Editado</span>
+                                        )}
+                                    </div>
+                                </td>
+                                <td className="p-2">
+                                    <div className="flex gap-2">
+                                        <button onClick={() => handleOpenModalForEdit(p)} className="text-sky-400 hover:text-sky-300"><PencilIcon className="w-5 h-5"/></button>
+                                        <button onClick={() => handleDeleteClick(p)} className="text-red-400 hover:text-red-300"><TrashIcon className="w-5 h-5"/></button>
+                                    </div>
                                 </td>
                             </tr>
                         ))}
@@ -654,10 +664,19 @@ const GestaoParametrosTaxas: React.FC = () => {
                             return (
                              <tr key={p.ID_Taxa} className="border-b border-slate-700">
                                 <td className="p-2">{p.Cidade}</td>
-                                <td className="p-2">{total.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}</td>
-                                <td className="p-2 flex gap-2">
-                                     <button onClick={() => handleOpenModalForEdit(p)} className="text-sky-400 hover:text-sky-300"><PencilIcon className="w-5 h-5"/></button>
-                                     <button onClick={() => handleDeleteClick(p)} className="text-red-400 hover:text-red-300"><TrashIcon className="w-5 h-5"/></button>
+                                <td className="p-2">
+                                    <div className="flex items-center whitespace-nowrap">
+                                        {total.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}
+                                        {p.MotivoAlteracao && (
+                                            <span title={`Última alteração: ${p.MotivoAlteracao}`} className="ml-2 text-[10px] text-yellow-500 cursor-help border border-yellow-500/50 rounded px-1 uppercase">Editado</span>
+                                        )}
+                                    </div>
+                                </td>
+                                <td className="p-2">
+                                     <div className="flex gap-2">
+                                         <button onClick={() => handleOpenModalForEdit(p)} className="text-sky-400 hover:text-sky-300"><PencilIcon className="w-5 h-5"/></button>
+                                         <button onClick={() => handleDeleteClick(p)} className="text-red-400 hover:text-red-300"><TrashIcon className="w-5 h-5"/></button>
+                                     </div>
                                 </td>
                             </tr>
                         )})}
@@ -819,4 +838,3 @@ export const GestaoParametros: React.FC = () => {
         </div>
     );
 };
-    
