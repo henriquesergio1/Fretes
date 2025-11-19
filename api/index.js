@@ -336,19 +336,29 @@ app.post('/cargas-erp/check', async (req, res) => {
     if (!sIni || !sFim) return res.status(400).json({ message: 'Datas de início (sIni) e fim (sFim) são obrigatórias.'});
 
     try {
-        // 1.1 Buscar dados brutos do ERP
+        // 1.1 Buscar dados brutos do ERP com query robusta (JOINs completos)
         const erpQuery = `
-            SELECT PDD.NUMSEQETGPDD AS NumeroCarga, 
-                   RTRIM(LTRIM(PDD.CODVEC)) AS COD_VEICULO, 
-                   LVR.DATEMSNF_LVRSVC AS DataCTE,
-                   CAST(ISNULL(LVR.VALSVCTOTLVRSVC, 0) AS DECIMAL(18, 2)) AS ValorCTE, 
-                   RTRIM(ISNULL(CDD.DESCDD, 'N/A')) AS Cidade
-            FROM Flexx10071188.dbo.IRFTLVRSVC LVR WITH(NOLOCK)
-            LEFT JOIN Flexx10071188.dbo.IBETPDDSVCNF_ PDD WITH(NOLOCK) ON PDD.CODEMP = LVR.CODEMP AND PDD.NUMDOCTPTPDD = LVR.NUMNF_LVRSVC AND PDD.INDSERDOCTPTPDD = LVR.CODSERNF_LVRSVC
-            LEFT JOIN Flexx10071188.dbo.IBETCET CET WITH(NOLOCK) ON LVR.CODEMP = CET.CODEMP AND LVR.CODCET = CET.CODCET
-            LEFT JOIN Flexx10071188.dbo.IBETEDRCET EDR WITH(NOLOCK) ON CET.CODEMP = EDR.CODEMP AND CET.CODCET = EDR.CODCET AND EDR.CODTPOEDR = 1
-            LEFT JOIN Flexx10071188.dbo.IBETCDD CDD WITH(NOLOCK) ON EDR.CODEMP = CDD.CODEMP AND EDR.CODCDD = CDD.CODCDD
-            WHERE LVR.DATEMSNF_LVRSVC BETWEEN @sIni AND @sFim AND LVR.INDSTULVRSVC = 1 AND PDD.NUMSEQETGPDD IS NOT NULL AND CDD.DESCDD IS NOT NULL;
+            SELECT
+             PDD.NUMSEQETGPDD AS NumeroCarga,
+             RTRIM(LTRIM(PDD.CODVEC)) AS COD_VEICULO,
+             LVR.DATEMSNF_LVRSVC AS DataCTE,
+             CAST(ISNULL(LVR.VALSVCTOTLVRSVC, 0) AS DECIMAL(18, 2)) AS ValorCTE,
+             RTRIM(ISNULL(CDD.DESCDD, 'N/A')) AS Cidade
+            FROM Flexx10071188.dbo.IRFTLVRSVC LVR (NOLOCK)
+            LEFT JOIN Flexx10071188.dbo.IBETPDDSVCNF_ PDD (NOLOCK)
+              ON PDD.CODEMP = LVR.CODEMP
+             AND PDD.NUMDOCTPTPDD = LVR.NUMNF_LVRSVC
+             AND PDD.INDSERDOCTPTPDD = LVR.CODSERNF_LVRSVC
+            LEFT JOIN Flexx10071188.dbo.IBETCET CET (NOLOCK)
+              ON LVR.CODEMP = CET.CODEMP AND LVR.CODCET = CET.CODCET
+            LEFT JOIN Flexx10071188.dbo.IBETEDRCET EDR (NOLOCK)
+              ON CET.CODEMP = EDR.CODEMP AND CET.CODCET = EDR.CODCET AND EDR.CODTPOEDR = 1
+            LEFT JOIN Flexx10071188.dbo.IBETCDD CDD (NOLOCK)
+              ON EDR.CODEMP = CDD.CODEMP AND EDR.CODPAS = CDD.CODPAS AND EDR.CODUF_ = CDD.CODUF_ AND EDR.CODCDD = CDD.CODCDD
+            WHERE LVR.DATEMSNF_LVRSVC BETWEEN @sIni AND @sFim
+              AND LVR.INDSTULVRSVC = 1
+              AND PDD.NUMSEQETGPDD IS NOT NULL
+              AND CDD.DESCDD IS NOT NULL
         `;
         const erpParams = [{ name: 'sIni', type: TYPES.Date, value: sIni }, { name: 'sFim', type: TYPES.Date, value: sFim }];
         const { rows: erpRows } = await executeQuery(configErp, erpQuery, erpParams);
