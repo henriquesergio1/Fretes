@@ -336,9 +336,10 @@ app.post('/cargas-erp/check', async (req, res) => {
 
     try {
         // 1.1 Buscar dados brutos do ERP com query robusta (JOINs completos)
+        // CORREÇÃO: PDD.NUMSEQETGPDD AS CARGA para corresponder ao mapeamento row.CARGA
         const erpQuery = `
             SELECT
-             PDD.NUMSEQETGPDD AS NumeroCarga,
+             PDD.NUMSEQETGPDD AS CARGA,
              PDD.CODVEC AS COD_VEICULO,
              ibetpdd.numviavec AS [NUM VIAGEM],
              ibetvec.numplcvec AS PLACA,

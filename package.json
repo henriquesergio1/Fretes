@@ -1,6 +1,6 @@
 {
   "name": "fretes-frontend",
-  "version": "1.0.10",
+  "version": "1.0.12",
   "private": true,
   "scripts": {
     "dev": "esbuild index.tsx --bundle --outfile=dist/bundle.js --loader:.tsx=tsx --loader:.ts=ts --serve --servedir=.",

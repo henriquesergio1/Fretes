@@ -357,6 +357,21 @@ const ERPImportCard: React.FC = () => {
 
     const handleCheck = async () => {
         setResult(null);
+
+        // Validação de Período (Máximo 45 dias)
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        const diffTime = Math.abs(end.getTime() - start.getTime());
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+        if (diffDays > 45) {
+            setResult({ 
+                success: false, 
+                message: `O período selecionado (${diffDays} dias) excede o limite máximo de 45 dias. Por favor, selecione um intervalo menor.` 
+            });
+            return;
+        }
+
         setIsChecking(true);
         setCheckResult(null);
 
@@ -403,7 +418,7 @@ const ERPImportCard: React.FC = () => {
             const syncRes = await api.syncCargasERP(newCargas, cargasToReactivate);
             setResult({ 
                 success: true, 
-                message: syncRes.message, 
+                message: `Sincronização concluída! ${syncRes.count} cargas processadas (Novas/Atualizadas).`, 
                 count: syncRes.count 
             });
             await reloadData('cargas');
