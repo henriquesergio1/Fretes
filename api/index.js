@@ -1,6 +1,7 @@
 
 
 
+
 // Carrega as variáveis de ambiente do arquivo .env
 require('dotenv').config();
 
@@ -334,6 +335,7 @@ app.post('/cargas-erp/import', async (req, res) => {
     try {
         // 1. Buscar dados brutos do ERP
         // Adicionado CAST para DECIMAL(18,2) para garantir a precisão vindo do ERP
+        // CORREÇÃO: Removido 'AND EDR.CODPAS = CDD.CODUF_' que causava erro de conversão (int vs varchar)
         const erpQuery = `
             SELECT PDD.NUMSEQETGPDD AS NumeroCarga, 
                    RTRIM(LTRIM(PDD.CODVEC)) AS COD_VEICULO, 
@@ -344,7 +346,7 @@ app.post('/cargas-erp/import', async (req, res) => {
             LEFT JOIN Flexx10071188.dbo.IBETPDDSVCNF_ PDD WITH(NOLOCK) ON PDD.CODEMP = LVR.CODEMP AND PDD.NUMDOCTPTPDD = LVR.NUMNF_LVRSVC AND PDD.INDSERDOCTPTPDD = LVR.CODSERNF_LVRSVC
             LEFT JOIN Flexx10071188.dbo.IBETCET CET WITH(NOLOCK) ON LVR.CODEMP = CET.CODEMP AND LVR.CODCET = CET.CODCET
             LEFT JOIN Flexx10071188.dbo.IBETEDRCET EDR WITH(NOLOCK) ON CET.CODEMP = EDR.CODEMP AND CET.CODCET = EDR.CODCET AND EDR.CODTPOEDR = 1
-            LEFT JOIN Flexx10071188.dbo.IBETCDD CDD WITH(NOLOCK) ON EDR.CODEMP = CDD.CODEMP AND EDR.CODPAS = CDD.CODUF_ AND EDR.CODCDD = CDD.CODCDD
+            LEFT JOIN Flexx10071188.dbo.IBETCDD CDD WITH(NOLOCK) ON EDR.CODEMP = CDD.CODEMP AND EDR.CODCDD = CDD.CODCDD
             WHERE LVR.DATEMSNF_LVRSVC BETWEEN @sIni AND @sFim AND LVR.INDSTULVRSVC = 1 AND PDD.NUMSEQETGPDD IS NOT NULL AND CDD.DESCDD IS NOT NULL;
         `;
         const erpParams = [{ name: 'sIni', type: TYPES.Date, value: sIni }, { name: 'sFim', type: TYPES.Date, value: sFim }];
