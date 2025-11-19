@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo, useCallback, useContext } from 're
 import { Veiculo, Carga, Lancamento, MotivoSubstituicao, NewLancamento } from '../types.ts';
 import * as api from '../services/apiService.ts';
 import { DataContext } from '../context/DataContext.tsx';
-import { ArrowLeftIcon, ArrowRightIcon, CheckCircleIcon, ExclamationIcon, SpinnerIcon, XCircleIcon } from './icons.tsx';
+import { ArrowLeftIcon, ArrowRightIcon, CheckCircleIcon, ExclamationIcon, SpinnerIcon, XCircleIcon, PencilIcon } from './icons.tsx';
 
 interface LancamentoFreteProps {
     setView: (view: 'relatorios') => void;
@@ -89,6 +89,54 @@ const SubstituicaoModal: React.FC<{
     );
 };
 
+// Modal para Motivo de Alteração Manual
+const ManualReasonModal: React.FC<{
+    isOpen: boolean;
+    onClose: () => void;
+    onConfirm: (motivo: string) => void;
+}> = ({ isOpen, onClose, onConfirm }) => {
+    const [motivo, setMotivo] = useState('');
+
+    useEffect(() => {
+        if (isOpen) setMotivo('');
+    }, [isOpen]);
+
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+            <div className="bg-slate-800 rounded-lg shadow-xl p-6 w-full max-w-md">
+                <div className="flex items-start mb-4">
+                    <PencilIcon className="w-8 h-8 text-yellow-400 mr-3 shrink-0" />
+                    <div>
+                        <h2 className="text-xl font-bold text-white">Alteração Manual de Valores</h2>
+                        <p className="text-slate-300 mt-1 text-sm">Você está prestes a sobrescrever os valores calculados automaticamente. Informe o motivo para liberar a edição.</p>
+                    </div>
+                </div>
+                <textarea
+                    className="w-full bg-slate-700 text-white border border-slate-600 rounded-md p-2 focus:ring-yellow-500 focus:border-yellow-500"
+                    rows={3}
+                    value={motivo}
+                    onChange={(e) => setMotivo(e.target.value)}
+                    placeholder="Ex: Acordo comercial diferenciado..."
+                />
+                <div className="mt-6 flex justify-end space-x-3">
+                    <button onClick={onClose} className="bg-slate-600 hover:bg-slate-500 text-white font-bold py-2 px-4 rounded-md transition duration-200">
+                        Cancelar
+                    </button>
+                    <button
+                        onClick={() => onConfirm(motivo)}
+                        disabled={!motivo.trim()}
+                        className="bg-yellow-600 hover:bg-yellow-500 disabled:bg-yellow-800 disabled:cursor-not-allowed text-white font-bold py-2 px-4 rounded-md transition duration-200"
+                    >
+                        Liberar Edição
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 export const LancamentoFrete: React.FC<LancamentoFreteProps> = ({ setView }) => {
     const { veiculos, parametrosValores, parametrosTaxas, editingLancamento, setEditingLancamento, lancamentos, addLancamento, updateLancamento } = useContext(DataContext);
     const [step, setStep] = useState(1);
@@ -106,6 +154,17 @@ export const LancamentoFrete: React.FC<LancamentoFreteProps> = ({ setView }) => 
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [pendingLancamento, setPendingLancamento] = useState<NewLancamento | null>(null);
+
+    // Estados para Modo Manual
+    const [isManualMode, setIsManualMode] = useState(false);
+    const [isManualReasonModalOpen, setIsManualReasonModalOpen] = useState(false);
+    const [manualValues, setManualValues] = useState({
+        ValorBase: 0,
+        Pedagio: 0,
+        Balsa: 0,
+        Outras: 0
+    });
+    const [motivoManual, setMotivoManual] = useState('');
 
     const isEditing = useMemo(() => !!editingLancamento, [editingLancamento]);
 
@@ -168,6 +227,9 @@ export const LancamentoFrete: React.FC<LancamentoFreteProps> = ({ setView }) => 
                 setSelectedCargas([]);
             }
             setStep(2);
+            // Reset manual mode when searching new loads
+            setIsManualMode(false);
+            setMotivoManual('');
         } catch (err: any) {
             setError(err.message || 'Falha ao buscar cargas.');
         } finally {
@@ -176,14 +238,22 @@ export const LancamentoFrete: React.FC<LancamentoFreteProps> = ({ setView }) => 
     }, [dataFrete, selectedVeiculo, isEditing]);
 
     const handleToggleCarga = (carga: Carga) => {
-        setSelectedCargas(prev => 
-            prev.some(c => c.ID_Carga === carga.ID_Carga) 
+        setSelectedCargas(prev => {
+            const newSelection = prev.some(c => c.ID_Carga === carga.ID_Carga) 
                 ? prev.filter(c => c.ID_Carga !== carga.ID_Carga) 
-                : [...prev, carga]
-        );
+                : [...prev, carga];
+            
+            // Se alterar as cargas, sai do modo manual para recalcular
+            if (isManualMode) {
+                setIsManualMode(false);
+                setMotivoManual('');
+            }
+            return newSelection;
+        });
     };
 
-    const calculoFrete = useMemo(() => {
+    // Cálculo Automático (Memoizado)
+    const calculoAutomatico = useMemo(() => {
         if (selectedCargas.length === 0 || !selectedVeiculo) return null;
         const veiculoParams = parametrosValores.filter(p => p.TipoVeiculo === selectedVeiculo.TipoVeiculo);
         const cargaMaisDistante = selectedCargas.reduce((max, carga) => (carga.KM > max.KM ? carga : max), selectedCargas[0]);
@@ -198,6 +268,24 @@ export const LancamentoFrete: React.FC<LancamentoFreteProps> = ({ setView }) => 
         const valorTotal = valorBase + Object.values(totalTaxas).reduce((sum, val) => sum + val, 0);
         return { CidadeBase: cargaMaisDistante.Cidade, KMBase: cargaMaisDistante.KM, ValorBase: valorBase, ...totalTaxas, ValorTotal: valorTotal };
     }, [selectedCargas, selectedVeiculo, parametrosValores, parametrosTaxas]);
+
+    // Lógica de Valores Finais (Automático vs Manual)
+    const valoresFinais = useMemo(() => {
+        if (isManualMode && calculoAutomatico) {
+            const total = manualValues.ValorBase + manualValues.Pedagio + manualValues.Balsa + manualValues.Outras;
+            return {
+                ...calculoAutomatico, // Mantém cidade base e KM
+                ValorBase: manualValues.ValorBase,
+                Pedagio: manualValues.Pedagio,
+                Balsa: manualValues.Balsa,
+                Outras: manualValues.Outras,
+                Ambiental: 0, // Zerado no modo manual
+                Chapa: 0,     // Zerado no modo manual
+                ValorTotal: total
+            };
+        }
+        return calculoAutomatico;
+    }, [isManualMode, manualValues, calculoAutomatico]);
     
     const resetForm = useCallback(() => {
         setStep(1);
@@ -208,7 +296,40 @@ export const LancamentoFrete: React.FC<LancamentoFreteProps> = ({ setView }) => 
         setError(null);
         setEditingLancamento(null);
         setMotivoEdicao('');
+        setIsManualMode(false);
+        setMotivoManual('');
     }, [setEditingLancamento]);
+
+    // Handlers para Modo Manual
+    const handleOpenManualModal = () => {
+        if (!calculoAutomatico) return;
+        setIsManualReasonModalOpen(true);
+    };
+
+    const handleConfirmManual = (reason: string) => {
+        if (calculoAutomatico) {
+            // Soma Ambiental + Chapa + Outras Originais no campo "Outras" para edição simplificada
+            const outrasConsolidado = calculoAutomatico.Outras + calculoAutomatico.Ambiental + calculoAutomatico.Chapa;
+            
+            setManualValues({
+                ValorBase: calculoAutomatico.ValorBase,
+                Pedagio: calculoAutomatico.Pedagio,
+                Balsa: calculoAutomatico.Balsa,
+                Outras: outrasConsolidado
+            });
+            setMotivoManual(reason);
+            setIsManualMode(true);
+            setIsManualReasonModalOpen(false);
+        }
+    };
+
+    const handleManualChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const { name, value } = e.target;
+        setManualValues(prev => ({
+            ...prev,
+            [name]: parseFloat(value) || 0
+        }));
+    };
 
     const submitLancamento = useCallback(async (lancamento: NewLancamento | Lancamento) => {
         setLoading(prev => ({...prev, save: true}));
@@ -250,25 +371,31 @@ export const LancamentoFrete: React.FC<LancamentoFreteProps> = ({ setView }) => 
 
 
     const handleConfirmarLancamento = () => {
-        if (!selectedVeiculoId || !calculoFrete) return;
+        if (!selectedVeiculoId || !valoresFinais) return;
 
         // Validação de Valor Zerado
-        if (calculoFrete.ValorTotal <= 0) {
-            setError("Não é possível salvar um lançamento com valor total zero. Verifique os parâmetros para esta cidade e veículo.");
+        if (valoresFinais.ValorTotal <= 0) {
+            setError("Não é possível salvar um lançamento com valor total zero. Verifique os parâmetros ou use a edição manual.");
             return;
+        }
+
+        // Constrói o objeto de lançamento
+        let finalMotivo = motivoEdicao;
+        
+        // Se houve ajuste manual, concatena o motivo
+        if (isManualMode && motivoManual) {
+            const prefixo = finalMotivo ? `${finalMotivo} | ` : '';
+            finalMotivo = `${prefixo}Ajuste Manual de Valores: ${motivoManual}`;
         }
 
         const lancamentoData: NewLancamento = {
             DataFrete: dataFrete,
             ID_Veiculo: selectedVeiculoId,
             Cargas: selectedCargas,
-            Calculo: calculoFrete,
-            Usuario: 'usuario.logado', // This should come from an auth context in a real app
+            Calculo: valoresFinais,
+            Usuario: 'usuario.logado',
+            Motivo: finalMotivo // Passa o motivo composto
         };
-
-        if(isEditing) {
-            (lancamentoData as Lancamento).Motivo = motivoEdicao;
-        }
 
         submitLancamento(lancamentoData);
     };
@@ -362,7 +489,7 @@ export const LancamentoFrete: React.FC<LancamentoFreteProps> = ({ setView }) => 
                     </div>
                 );
             case 3:
-                const isZeroValue = calculoFrete && calculoFrete.ValorTotal === 0;
+                const isZeroValue = valoresFinais && valoresFinais.ValorTotal === 0;
                 return (
                     <div>
                         <h3 className="text-lg font-semibold text-white mb-4">3. Resumo e Cálculo</h3>
@@ -378,26 +505,71 @@ export const LancamentoFrete: React.FC<LancamentoFreteProps> = ({ setView }) => 
                                     ))}
                                 </ul>
                             </div>
-                            {calculoFrete && (
+                            {valoresFinais && (
                                 <div className="space-y-2 text-sm">
-                                    <h4 className="font-bold text-sky-400 mb-3">Cálculo do Frete</h4>
-                                    <div className="flex justify-between py-2 border-b border-slate-700"><span className="text-slate-400">Cidade Base (KM):</span> <span className="font-mono">{calculoFrete.CidadeBase} ({calculoFrete.KMBase} km)</span></div>
-                                    <div className="flex justify-between py-2 border-b border-slate-700"><span className="text-slate-400">Valor Base:</span> <span className="font-mono">{calculoFrete.ValorBase.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span></div>
-                                    <div className="flex justify-between py-2 border-b border-slate-700"><span className="text-slate-400">Total Pedágio:</span> <span className="font-mono">{calculoFrete.Pedagio.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span></div>
-                                    <div className="flex justify-between py-2 border-b border-slate-700"><span className="text-slate-400">Total Balsa:</span> <span className="font-mono">{calculoFrete.Balsa.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span></div>
-                                    <div className="flex justify-between py-2 border-b border-slate-700"><span className="text-slate-400">Outras Taxas:</span> <span className="font-mono">{(calculoFrete.Ambiental + calculoFrete.Chapa + calculoFrete.Outras).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span></div>
-                                    <div className="flex justify-between pt-3 text-lg"><span className="font-bold text-white">VALOR TOTAL:</span> <span className={`font-bold ${isZeroValue ? 'text-red-500' : 'text-green-400'}`}>{calculoFrete.ValorTotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span></div>
+                                    <div className="flex justify-between items-center mb-3">
+                                        <h4 className="font-bold text-sky-400">Cálculo do Frete</h4>
+                                        <button 
+                                            onClick={handleOpenManualModal}
+                                            className={`text-xs px-2 py-1 rounded border transition-colors ${isManualMode ? 'bg-yellow-600 text-white border-yellow-500' : 'text-sky-400 border-sky-500 hover:bg-sky-900/30'}`}
+                                            title={isManualMode ? "Valores definidos manualmente" : "Sobrescrever valores calculados"}
+                                        >
+                                            {isManualMode ? 'Modo Manual Ativo' : 'Definir Manualmente'}
+                                        </button>
+                                    </div>
                                     
-                                    {isZeroValue && (
+                                    <div className="flex justify-between py-2 border-b border-slate-700">
+                                        <span className="text-slate-400">Cidade Base (KM):</span> 
+                                        <span className="font-mono">{valoresFinais.CidadeBase} ({valoresFinais.KMBase} km)</span>
+                                    </div>
+
+                                    {/* Campos de Valor - Condicional: Texto ou Input */}
+                                    {isManualMode ? (
+                                        <>
+                                            <div className="flex justify-between items-center py-1 border-b border-slate-700">
+                                                <label htmlFor="ValorBase" className="text-slate-400">Valor Base:</label>
+                                                <input type="number" name="ValorBase" value={manualValues.ValorBase} onChange={handleManualChange} className="w-32 bg-slate-700 text-right text-white border border-slate-600 rounded p-1 text-sm" />
+                                            </div>
+                                            <div className="flex justify-between items-center py-1 border-b border-slate-700">
+                                                <label htmlFor="Pedagio" className="text-slate-400">Total Pedágio:</label>
+                                                <input type="number" name="Pedagio" value={manualValues.Pedagio} onChange={handleManualChange} className="w-32 bg-slate-700 text-right text-white border border-slate-600 rounded p-1 text-sm" />
+                                            </div>
+                                            <div className="flex justify-between items-center py-1 border-b border-slate-700">
+                                                <label htmlFor="Balsa" className="text-slate-400">Total Balsa:</label>
+                                                <input type="number" name="Balsa" value={manualValues.Balsa} onChange={handleManualChange} className="w-32 bg-slate-700 text-right text-white border border-slate-600 rounded p-1 text-sm" />
+                                            </div>
+                                            <div className="flex justify-between items-center py-1 border-b border-slate-700">
+                                                <label htmlFor="Outras" className="text-slate-400">Outras Taxas:</label>
+                                                <input type="number" name="Outras" value={manualValues.Outras} onChange={handleManualChange} className="w-32 bg-slate-700 text-right text-white border border-slate-600 rounded p-1 text-sm" />
+                                            </div>
+                                            <div className="text-xs text-slate-500 italic text-right mt-1">
+                                                * Ambiental e Chapa foram somados em "Outras Taxas".
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <div className="flex justify-between py-2 border-b border-slate-700"><span className="text-slate-400">Valor Base:</span> <span className="font-mono">{valoresFinais.ValorBase.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span></div>
+                                            <div className="flex justify-between py-2 border-b border-slate-700"><span className="text-slate-400">Total Pedágio:</span> <span className="font-mono">{valoresFinais.Pedagio.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span></div>
+                                            <div className="flex justify-between py-2 border-b border-slate-700"><span className="text-slate-400">Total Balsa:</span> <span className="font-mono">{valoresFinais.Balsa.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span></div>
+                                            <div className="flex justify-between py-2 border-b border-slate-700"><span className="text-slate-400">Outras Taxas:</span> <span className="font-mono">{(valoresFinais.Ambiental + valoresFinais.Chapa + valoresFinais.Outras).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span></div>
+                                        </>
+                                    )}
+
+                                    <div className="flex justify-between pt-3 text-lg">
+                                        <span className="font-bold text-white">VALOR TOTAL:</span> 
+                                        <span className={`font-bold ${isZeroValue ? 'text-red-500' : 'text-green-400'}`}>{valoresFinais.ValorTotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+                                    </div>
+                                    
+                                    {isZeroValue && !isManualMode && (
                                         <div className="mt-4 p-3 bg-red-900/50 text-red-200 border border-red-700/50 rounded-md flex items-start">
                                             <ExclamationIcon className="w-5 h-5 mr-2 mt-0.5 flex-shrink-0"/>
                                             <div>
                                                 <p className="font-bold">Valor do Frete Zerado!</p>
                                                 <p className="text-xs mt-1">
-                                                    Não foi encontrado um valor base para <b>{calculoFrete.CidadeBase}</b> com o tipo de veículo <b>{selectedVeiculo?.TipoVeiculo}</b>.
+                                                    Não foi encontrado um valor base para <b>{valoresFinais.CidadeBase}</b> com o tipo de veículo <b>{selectedVeiculo?.TipoVeiculo}</b>.
                                                 </p>
                                                 <p className="text-xs mt-1">
-                                                    Por favor, cadastre os valores na tela de <b>Parâmetros</b> antes de prosseguir.
+                                                    Cadastre os valores nos Parâmetros ou use o botão <b>"Definir Manualmente"</b> acima.
                                                 </p>
                                             </div>
                                         </div>
@@ -406,7 +578,7 @@ export const LancamentoFrete: React.FC<LancamentoFreteProps> = ({ setView }) => 
                             )}
                              {isEditing && (
                                 <div className="md:col-span-2">
-                                    <label htmlFor="motivoEdicao" className="block text-sm font-medium text-yellow-300 mb-1">Motivo da Alteração (Obrigatório)</label>
+                                    <label htmlFor="motivoEdicao" className="block text-sm font-medium text-yellow-300 mb-1">Motivo da Alteração de Cadastro (Obrigatório)</label>
                                     <select
                                         id="motivoEdicao"
                                         value={motivoEdicao}
@@ -429,6 +601,7 @@ export const LancamentoFrete: React.FC<LancamentoFreteProps> = ({ setView }) => 
     return (
         <div className="bg-slate-900 p-4 sm:p-6 md:p-8 rounded-lg shadow-2xl">
             <SubstituicaoModal isOpen={isModalOpen} motivos={motivos} onConfirm={handleConfirmSubstituicao} onCancel={() => setIsModalOpen(false)} />
+            <ManualReasonModal isOpen={isManualReasonModalOpen} onClose={() => setIsManualReasonModalOpen(false)} onConfirm={handleConfirmManual} />
             
             <h2 className="text-2xl font-bold text-white mb-2">{isEditing ? 'Editar Lançamento de Frete' : 'Lançamento de Frete'}</h2>
             <p className="text-slate-400 mb-8">{isEditing ? 'Ajuste os dados do frete e salve as alterações.' : 'Siga as etapas para registrar um novo frete.'}</p>
@@ -500,10 +673,10 @@ export const LancamentoFrete: React.FC<LancamentoFreteProps> = ({ setView }) => 
                             loading.save || 
                             !!successMessage || 
                             (isEditing && !motivoEdicao) ||
-                            (calculoFrete?.ValorTotal === 0)
+                            (valoresFinais?.ValorTotal === 0)
                         }
                         className="bg-green-600 hover:bg-green-500 disabled:bg-green-800 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-2 px-4 rounded-md transition duration-200 flex items-center"
-                        title={calculoFrete?.ValorTotal === 0 ? "Não é possível salvar com valor zerado" : "Salvar Lançamento"}
+                        title={valoresFinais?.ValorTotal === 0 ? "Não é possível salvar com valor zerado" : "Salvar Lançamento"}
                     >
                         {loading.save ? <SpinnerIcon className="w-5 h-5 mr-2" /> : <CheckCircleIcon className="w-5 h-5 mr-2" />}
                         {loading.save ? "Salvando..." : (isEditing ? 'Atualizar Lançamento' : 'Confirmar e Salvar')}
