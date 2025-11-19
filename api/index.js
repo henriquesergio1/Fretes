@@ -157,7 +157,12 @@ app.put('/usuarios/:id', authenticateToken, async (req, res) => {
 
 // VEÍCULOS
 app.get('/veiculos', authenticateToken, async (req, res) => {
-    try { const { rows } = await executeQuery(configOdin, 'SELECT * FROM Veiculos ORDER BY Ativo DESC, Placa ASC'); res.json(rows); } catch (error) { res.status(500).json({ message: error.message }); }
+    try { 
+        // Definição explícita de colunas para garantir casing correto e evitar propriedades undefined no frontend
+        const query = 'SELECT ID_Veiculo, COD_Veiculo, Placa, TipoVeiculo, Motorista, CapacidadeKG, Ativo, Origem, UsuarioCriacao, UsuarioAlteracao FROM Veiculos ORDER BY Ativo DESC, Placa ASC';
+        const { rows } = await executeQuery(configOdin, query); 
+        res.json(rows); 
+    } catch (error) { res.status(500).json({ message: error.message }); }
 });
 app.post('/veiculos', authenticateToken, async (req, res) => {
     const v = req.body;

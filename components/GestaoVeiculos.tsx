@@ -173,9 +173,9 @@ export const GestaoVeiculos: React.FC = () => {
     const filteredVeiculos = useMemo(() => {
         if (!searchTerm) return veiculos;
         return veiculos.filter(v => 
-            v.Placa.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            v.Motorista.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            v.COD_Veiculo.toLowerCase().includes(searchTerm.toLowerCase())
+            (v.Placa || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (v.Motorista || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (v.COD_Veiculo || '').toLowerCase().includes(searchTerm.toLowerCase())
         );
     }, [veiculos, searchTerm]);
 
