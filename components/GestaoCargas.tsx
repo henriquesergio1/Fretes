@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useContext, useEffect } from 'react';
 import { Carga } from '../types.ts';
 import { DataContext } from '../context/DataContext.tsx';
@@ -189,7 +190,7 @@ const CargaModal: React.FC<{
                            <select name="COD_VEICULO" id="COD_VEICULO" value={formData.COD_VEICULO} onChange={handleChange} className="w-full bg-slate-700 text-white border border-slate-600 rounded-md p-2 focus:ring-sky-500 focus:border-sky-500">
                                 <option value="">Selecione um veículo</option>
                                 {veiculos.filter(v => v.Ativo).map(v => (
-                                    <option key={v.COD_Veiculo} value={v.COD_Veiculo}>{v.Placa} ({v.COD_Veiculo})</option>
+                                    <option key={v.COD_Veiculo} value={v.COD_Veiculo}>{v.COD_Veiculo} - {v.Placa}</option>
                                 ))}
                             </select>
                         </div>

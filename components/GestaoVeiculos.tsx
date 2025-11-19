@@ -174,7 +174,8 @@ export const GestaoVeiculos: React.FC = () => {
         if (!searchTerm) return veiculos;
         return veiculos.filter(v => 
             v.Placa.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            v.Motorista.toLowerCase().includes(searchTerm.toLowerCase())
+            v.Motorista.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            v.COD_Veiculo.toLowerCase().includes(searchTerm.toLowerCase())
         );
     }, [veiculos, searchTerm]);
 
@@ -231,7 +232,7 @@ export const GestaoVeiculos: React.FC = () => {
             <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
                 <input
                     type="text"
-                    placeholder="Buscar por Placa ou Motorista..."
+                    placeholder="Buscar por Placa, Código ou Motorista..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="w-full sm:w-1/2 bg-slate-700 text-white border border-slate-600 rounded-md p-2 focus:ring-sky-500 focus:border-sky-500"
@@ -247,6 +248,7 @@ export const GestaoVeiculos: React.FC = () => {
                     <table className="w-full text-sm text-left text-slate-300">
                         <thead className="text-xs text-slate-400 uppercase bg-slate-700">
                             <tr>
+                                <th scope="col" className="p-4">Código</th>
                                 <th scope="col" className="p-4">Placa</th>
                                 <th scope="col" className="p-4">Motorista</th>
                                 <th scope="col" className="p-4">Tipo</th>
@@ -258,6 +260,7 @@ export const GestaoVeiculos: React.FC = () => {
                         <tbody>
                             {filteredVeiculos.map(veiculo => (
                                 <tr key={veiculo.ID_Veiculo} className="bg-slate-800 border-b border-slate-700 hover:bg-slate-700/50">
+                                    <td className="p-4 font-mono text-xs text-slate-400">{veiculo.COD_Veiculo}</td>
                                     <td className="p-4 font-medium text-white">
                                         <div className="flex items-center gap-2">
                                             {veiculo.Placa}

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo, useCallback, useContext } from 'react';
 import { Veiculo, Carga, Lancamento, MotivoSubstituicao, NewLancamento } from '../types.ts';
 import * as api from '../services/apiService.ts';
@@ -292,7 +293,11 @@ export const LancamentoFrete: React.FC<LancamentoFreteProps> = ({ setView }) => 
                                 <label htmlFor="veiculo" className="block text-sm font-medium text-slate-300 mb-1">Veículo</label>
                                 <select id="veiculo" value={selectedVeiculoId || ''} onChange={(e) => setSelectedVeiculoId(Number(e.target.value))} className="w-full bg-slate-700 text-white border border-slate-600 rounded-md p-2 focus:ring-sky-500 focus:border-sky-500">
                                     <option value="" disabled>Selecione um veículo</option>
-                                    {activeVeiculos.map(v => <option key={v.ID_Veiculo} value={v.ID_Veiculo}>{v.Placa} - {v.Motorista}</option>)}
+                                    {activeVeiculos.map(v => (
+                                        <option key={v.ID_Veiculo} value={v.ID_Veiculo}>
+                                            {v.COD_Veiculo} - {v.Placa} - {v.Motorista}
+                                        </option>
+                                    ))}
                                 </select>
                             </div>
                             <div>
