@@ -7,10 +7,13 @@ import { Importacao } from './components/Importacao.tsx';
 import { GestaoVeiculos } from './components/GestaoVeiculos.tsx';
 import { GestaoParametros } from './components/GestaoParametros.tsx';
 import { GestaoCargas } from './components/GestaoCargas.tsx';
+import { GestaoUsuarios } from './components/GestaoUsuarios.tsx';
+import { Login } from './components/Login.tsx';
 import { DataProvider, DataContext } from './context/DataContext.tsx';
+import { AuthProvider, AuthContext, useAuth } from './context/AuthContext.tsx';
 import { ChartBarIcon, CogIcon, PlusCircleIcon, TruckIcon, DocumentReportIcon, CloudUploadIcon, BoxIcon, SpinnerIcon, XCircleIcon, ChevronDoubleLeftIcon, ChevronDoubleRightIcon } from './components/icons.tsx';
 
-type View = 'dashboard' | 'lancamento' | 'veiculos' | 'cargas' | 'parametros' | 'relatorios' | 'importacao';
+type View = 'dashboard' | 'lancamento' | 'veiculos' | 'cargas' | 'parametros' | 'relatorios' | 'importacao' | 'usuarios';
 
 interface SidebarProps {
     activeView: View;
@@ -21,6 +24,7 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ activeView, setView, isCollapsed, setCollapsed }) => {
     const { systemConfig } = useContext(DataContext);
+    const { user, logout } = useAuth();
     
     const navItems = [
         { id: 'dashboard', label: 'Dashboard', icon: ChartBarIcon },
@@ -30,7 +34,13 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, setView, isCollapsed, set
         { id: 'relatorios', label: 'Relatórios', icon: DocumentReportIcon },
         { id: 'importacao', label: 'Importação', icon: CloudUploadIcon },
         { id: 'parametros', label: 'Parâmetros', icon: CogIcon },
-    ] as const;
+    ];
+
+    // Adiciona Gestão de Usuários se for Admin
+    if (user?.Perfil === 'Admin') {
+        // @ts-ignore (Adicionando item dinâmico)
+        navItems.push({ id: 'usuarios', label: 'Usuários', icon: ({className}) => <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg> });
+    }
 
     return (
         <div className={`bg-slate-900 border-r border-slate-800 flex flex-col transition-all duration-300 ${isCollapsed ? 'w-20' : 'w-64'}`}>
@@ -62,7 +72,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, setView, isCollapsed, set
                 {navItems.map(item => (
                     <button
                         key={item.id}
-                        onClick={() => setView(item.id)}
+                        onClick={() => setView(item.id as View)}
                         title={isCollapsed ? item.label : undefined}
                         className={`w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors duration-200 ${isCollapsed ? 'justify-center' : ''} ${
                             activeView === item.id 
@@ -76,10 +86,28 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, setView, isCollapsed, set
                 ))}
             </nav>
             
-            {/* System Info Footer */}
+            {/* User Info & Footer */}
             <div className="border-t border-slate-800 p-4 bg-slate-900/50">
+                <div className={`flex flex-col mb-4 ${isCollapsed ? 'items-center' : ''}`}>
+                     <div className={`flex items-center mb-2 ${isCollapsed ? 'justify-center' : ''}`}>
+                        <div className="w-8 h-8 rounded-full bg-sky-600 flex items-center justify-center text-white font-bold text-xs">
+                            {user?.Nome.charAt(0).toUpperCase()}
+                        </div>
+                        <div className={`ml-3 overflow-hidden transition-all duration-300 ${isCollapsed ? 'w-0 opacity-0' : 'w-auto opacity-100'}`}>
+                            <p className="text-sm font-medium text-white truncate">{user?.Nome}</p>
+                            <p className="text-xs text-slate-400 truncate">{user?.Perfil}</p>
+                        </div>
+                     </div>
+                     <button 
+                        onClick={logout}
+                        className="text-xs text-red-400 hover:text-red-300 font-bold transition-colors"
+                     >
+                         {isCollapsed ? 'SAIR' : 'Sair do Sistema'}
+                     </button>
+                </div>
+
                 <div className={`flex flex-col ${isCollapsed ? 'items-center' : ''}`}>
-                    <p className="text-xs font-mono text-slate-500" title="Versão do Sistema">v1.1.0</p>
+                    <p className="text-xs font-mono text-slate-500" title="Versão do Sistema">v1.2.0</p>
                     <div className={`transition-all duration-300 overflow-hidden ${isCollapsed ? 'h-0 opacity-0' : 'h-auto opacity-100 mt-1'}`}>
                         <p className="text-[10px] text-slate-600 uppercase tracking-wider">Dev</p>
                         <p className="text-xs text-slate-400 font-medium whitespace-nowrap">Sérgio Oliveira</p>
@@ -100,29 +128,29 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, setView, isCollapsed, set
     );
 };
 
-const AppUI: React.FC = () => {
+const AuthenticatedApp: React.FC = () => {
     const { loading, error } = useContext(DataContext);
+    const { isAuthenticated, loading: authLoading } = useAuth();
     const [activeView, setActiveView] = useState<View>('dashboard');
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
+    if (authLoading) return <div className="flex h-screen items-center justify-center bg-slate-900 text-white"><SpinnerIcon className="w-10 h-10" /></div>;
+
+    if (!isAuthenticated) {
+        return <Login />;
+    }
+
     const renderContent = () => {
         switch (activeView) {
-            case 'lancamento':
-                return <LancamentoFrete setView={setActiveView} />;
-            case 'importacao':
-                return <Importacao />;
-            case 'dashboard':
-                return <Dashboard />;
-            case 'veiculos':
-                return <GestaoVeiculos />;
-            case 'cargas':
-                return <GestaoCargas />;
-            case 'relatorios':
-                return <Relatorios setView={setActiveView} />;
-            case 'parametros':
-                return <GestaoParametros />;
-            default:
-                return <Dashboard />;
+            case 'lancamento': return <LancamentoFrete setView={setActiveView} />;
+            case 'importacao': return <Importacao />;
+            case 'dashboard': return <Dashboard />;
+            case 'veiculos': return <GestaoVeiculos />;
+            case 'cargas': return <GestaoCargas />;
+            case 'relatorios': return <Relatorios setView={setActiveView} />;
+            case 'parametros': return <GestaoParametros />;
+            case 'usuarios': return <GestaoUsuarios />;
+            default: return <Dashboard />;
         }
     };
     
@@ -164,9 +192,11 @@ const AppUI: React.FC = () => {
 
 const App: React.FC = () => {
     return (
-        <DataProvider>
-            <AppUI />
-        </DataProvider>
+        <AuthProvider>
+            <DataProvider>
+                <AuthenticatedApp />
+            </DataProvider>
+        </AuthProvider>
     );
 }
 

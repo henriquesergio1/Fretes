@@ -21,7 +21,7 @@ export interface Carga {
   Origem?: 'ERP' | 'CSV' | 'Manual';
   Excluido?: boolean;
   MotivoExclusao?: string;
-  MotivoAlteracao?: string; // Campo para auditoria de edição
+  MotivoAlteracao?: string;
 }
 
 export interface ParametroValor {
@@ -86,7 +86,7 @@ export interface SystemConfig {
 export interface VehicleConflict {
     erp: Veiculo;
     local: Veiculo;
-    action: 'overwrite' | 'skip'; // Decisão do usuário
+    action: 'overwrite' | 'skip';
 }
 
 export interface VehicleCheckResult {
@@ -95,12 +95,12 @@ export interface VehicleCheckResult {
     message: string;
 }
 
-// Interfaces para Importação de Cargas (Reativação)
+// Interfaces para Importação de Cargas
 export interface CargaReactivation {
-    erp: Carga;        // Dados vindos do ERP (atualizados)
-    local: Carga;      // Dados locais (excluídos)
-    motivoExclusao: string; // Motivo pelo qual foi excluída anteriormente
-    selected: boolean; // Se o usuário quer reativar
+    erp: Carga;
+    local: Carga;
+    motivoExclusao: string;
+    selected: boolean;
 }
 
 export interface CargaCheckResult {
@@ -108,4 +108,19 @@ export interface CargaCheckResult {
     deletedCargas: CargaReactivation[];
     message: string;
     missingVehicles: string[];
+}
+
+// Interface de Usuário
+export interface Usuario {
+    ID_Usuario: number;
+    Nome: string;
+    Usuario: string;
+    Perfil: 'Admin' | 'Operador';
+    Ativo: boolean;
+    Senha?: string; // Opcional, usado apenas no envio
+}
+
+export interface AuthResponse {
+    user: Usuario;
+    token: string;
 }
