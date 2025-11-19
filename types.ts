@@ -19,6 +19,7 @@ export interface Carga {
   Origem?: 'ERP' | 'CSV' | 'Manual';
   Excluido?: boolean;
   MotivoExclusao?: string;
+  MotivoAlteracao?: string; // Campo para auditoria de edição
 }
 
 export interface ParametroValor {

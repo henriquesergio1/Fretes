@@ -100,6 +100,7 @@ CREATE TABLE CargasManuais (
     Origem NVARCHAR(20) CHECK (Origem IN ('ERP', 'CSV', 'Manual')), -- Valida a origem da carga
     Excluido BIT NOT NULL DEFAULT 0,
     MotivoExclusao NVARCHAR(255),
+    MotivoAlteracao NVARCHAR(255), -- Campo de Auditoria para Edições
     
     CONSTRAINT FK_CargasManuais_Veiculos FOREIGN KEY (COD_VEICULO) REFERENCES Veiculos(COD_Veiculo)
 );

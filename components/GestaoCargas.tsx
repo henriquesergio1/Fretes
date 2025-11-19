@@ -86,6 +86,7 @@ const CargaModal: React.FC<{
     
     const { cidades, veiculos, parametrosValores } = useContext(DataContext);
     const [formData, setFormData] = useState<Carga | null>(null);
+    const isEditing = formData && formData.ID_Carga !== 0;
 
     useEffect(() => {
         setFormData(carga);
@@ -121,7 +122,7 @@ const CargaModal: React.FC<{
 
     if (!isOpen || !formData) return null;
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
         setFormData({ ...formData, [name]: value });
     };
@@ -137,15 +138,22 @@ const CargaModal: React.FC<{
             alert("Por favor, preencha todos os campos obrigatórios: Nº Carga, Cidade e Veículo.");
             return;
         }
+
+        // Validação de Auditoria: Se for edição, Motivo é obrigatório
+        if (isEditing && (!processedData.MotivoAlteracao || processedData.MotivoAlteracao.trim() === "")) {
+            alert("Para fins de auditoria, é obrigatório informar o Motivo da Edição.");
+            return;
+        }
+
         onSave(processedData);
     };
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
-            <div className="bg-slate-800 rounded-lg shadow-xl p-6 w-full max-w-lg">
+            <div className="bg-slate-800 rounded-lg shadow-xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
                 <div className="flex justify-between items-center mb-6">
                     <h2 className="text-2xl font-bold text-white">
-                        {formData.ID_Carga ? 'Editar Carga' : 'Cadastrar Nova Carga'}
+                        {isEditing ? 'Editar Carga' : 'Cadastrar Nova Carga'}
                     </h2>
                     <button onClick={onClose} className="text-slate-400 hover:text-white">
                         <XCircleIcon className="w-8 h-8"/>
@@ -153,6 +161,24 @@ const CargaModal: React.FC<{
                 </div>
 
                 <div className="space-y-4">
+                    {/* Auditoria Field - Only visible when Editing */}
+                    {isEditing && (
+                        <div className="bg-yellow-900/20 border border-yellow-600/30 p-3 rounded-md mb-4">
+                            <label htmlFor="MotivoAlteracao" className="block text-sm font-bold text-yellow-400 mb-1">
+                                Motivo da Edição (Obrigatório)
+                            </label>
+                            <textarea
+                                name="MotivoAlteracao"
+                                id="MotivoAlteracao"
+                                rows={2}
+                                value={formData.MotivoAlteracao || ''}
+                                onChange={handleChange}
+                                className="w-full bg-slate-700 text-white border border-yellow-500/50 rounded-md p-2 focus:ring-yellow-500 focus:border-yellow-500 placeholder-slate-500"
+                                placeholder="Descreva por que esta carga está sendo alterada..."
+                            />
+                        </div>
+                    )}
+
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                             <label htmlFor="NumeroCarga" className="block text-sm font-medium text-slate-300 mb-1">Nº Carga</label>
@@ -196,7 +222,7 @@ const CargaModal: React.FC<{
                         Cancelar
                     </button>
                     <button onClick={handleSaveClick} className="bg-sky-600 hover:bg-sky-500 text-white font-bold py-2 px-4 rounded-md transition duration-200">
-                        Salvar
+                        {isEditing ? 'Confirmar Alteração' : 'Salvar'}
                     </button>
                 </div>
             </div>
@@ -272,9 +298,8 @@ export const GestaoCargas: React.FC = () => {
 
     const handleOpenModalForEdit = (carga: Carga) => {
         // CORREÇÃO: Normaliza a data para YYYY-MM-DD.
-        // O banco pode retornar ISO (2025-11-18T00:00:00.000Z). O .split('T')[0] pega só a data.
         const cleanDate = String(carga.DataCTE).split('T')[0];
-        setEditingCarga({ ...carga, DataCTE: cleanDate });
+        setEditingCarga({ ...carga, DataCTE: cleanDate, MotivoAlteracao: '' }); // Limpa motivo anterior ao abrir
         setIsModalOpen(true);
     };
 
@@ -384,8 +409,6 @@ export const GestaoCargas: React.FC = () => {
                                     ? "bg-red-900/10"
                                     : "bg-slate-800 border-b border-slate-700 hover:bg-slate-700/50";
                                 
-                                // CORREÇÃO: Assegura que a string da data seja limpa antes de criar o objeto Date
-                                // Isso resolve o problema "Invalid Date" quando vem ISO do backend.
                                 const rawDate = String(carga.DataCTE).split('T')[0];
                                 const displayDate = new Date(rawDate + 'T00:00:00').toLocaleDateString('pt-BR');
 
@@ -395,6 +418,9 @@ export const GestaoCargas: React.FC = () => {
                                         <div className="flex items-center gap-3">
                                             <span>{carga.NumeroCarga}</span>
                                             <OrigemTag origem={carga.Origem} />
+                                            {carga.MotivoAlteracao && !showOnlyExcluded && (
+                                                <span title={`Última alteração: ${carga.MotivoAlteracao}`} className="text-xs text-yellow-500 cursor-help border border-yellow-500/50 rounded px-1">Edited</span>
+                                            )}
                                         </div>
                                     </td>
                                     <td className="p-4">{carga.Cidade}</td>

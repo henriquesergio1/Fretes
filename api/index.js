@@ -157,13 +157,14 @@ app.put('/cargas-manuais/:id', async (req, res) => {
             { name: 'id', type: TYPES.Int, value: id }, { name: 'excluido', type: TYPES.Bit, value: true },
             { name: 'motivo', type: TYPES.NVarChar, value: c.MotivoExclusao },
         ];
-    } else { // Lógica para edição
-        query = `UPDATE CargasManuais SET NumeroCarga = @num, Cidade = @cidade, ValorCTE = @valor, DataCTE = @data, KM = @km, COD_VEICULO = @cod OUTPUT INSERTED.* WHERE ID_Carga = @id;`;
+    } else { // Lógica para edição (AGORA INCLUI MOTIVO ALTERACAO)
+        query = `UPDATE CargasManuais SET NumeroCarga = @num, Cidade = @cidade, ValorCTE = @valor, DataCTE = @data, KM = @km, COD_VEICULO = @cod, MotivoAlteracao = @motivoAlt OUTPUT INSERTED.* WHERE ID_Carga = @id;`;
         params = [
             { name: 'id', type: TYPES.Int, value: id }, { name: 'num', type: TYPES.NVarChar, value: String(c.NumeroCarga) },
             { name: 'cidade', type: TYPES.NVarChar, value: c.Cidade }, { name: 'valor', type: TYPES.Decimal, value: c.ValorCTE, options: { precision: 18, scale: 2 } },
             { name: 'data', type: TYPES.Date, value: c.DataCTE }, { name: 'km', type: TYPES.Int, value: c.KM },
             { name: 'cod', type: TYPES.NVarChar, value: c.COD_VEICULO },
+            { name: 'motivoAlt', type: TYPES.NVarChar, value: c.MotivoAlteracao || null }
         ];
     }
     try {
@@ -191,7 +192,7 @@ app.post('/cargas-erp/import', async (req, res) => {
             LEFT JOIN Flexx10071188.dbo.IBETPDDSVCNF_ PDD WITH(NOLOCK) ON PDD.CODEMP = LVR.CODEMP AND PDD.NUMDOCTPTPDD = LVR.NUMNF_LVRSVC AND PDD.INDSERDOCTPTPDD = LVR.CODSERNF_LVRSVC
             LEFT JOIN Flexx10071188.dbo.IBETCET CET WITH(NOLOCK) ON LVR.CODEMP = CET.CODEMP AND LVR.CODCET = CET.CODCET
             LEFT JOIN Flexx10071188.dbo.IBETEDRCET EDR WITH(NOLOCK) ON CET.CODEMP = EDR.CODEMP AND CET.CODCET = EDR.CODCET AND EDR.CODTPOEDR = 1
-            LEFT JOIN Flexx10071188.dbo.IBETCDD CDD WITH(NOLOCK) ON EDR.CODEMP = CDD.CODEMP AND EDR.CODPAS = CDD.CODPAS AND EDR.CODUF_ = CDD.CODUF_ AND EDR.CODCDD = CDD.CODCDD
+            LEFT JOIN Flexx10071188.dbo.IBETCDD CDD WITH(NOLOCK) ON EDR.CODEMP = CDD.CODEMP AND EDR.CODPAS = CDD.CODUF_ AND EDR.CODCDD = CDD.CODCDD
             WHERE LVR.DATEMSNF_LVRSVC BETWEEN @sIni AND @sFim AND LVR.INDSTULVRSVC = 1 AND PDD.NUMSEQETGPDD IS NOT NULL AND CDD.DESCDD IS NOT NULL;
         `;
         const erpParams = [{ name: 'sIni', type: TYPES.Date, value: sIni }, { name: 'sFim', type: TYPES.Date, value: sFim }];
