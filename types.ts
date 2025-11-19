@@ -30,6 +30,9 @@ export interface ParametroValor {
   TipoVeiculo: string;
   ValorBase: number;
   KM: number;
+  Excluido?: boolean;
+  MotivoExclusao?: string;
+  MotivoAlteracao?: string;
 }
 
 export interface ParametroTaxa {
@@ -40,6 +43,9 @@ export interface ParametroTaxa {
   Ambiental: number;
   Chapa: number;
   Outras: number;
+  Excluido?: boolean;
+  MotivoExclusao?: string;
+  MotivoAlteracao?: string;
 }
 
 export interface MotivoSubstituicao {

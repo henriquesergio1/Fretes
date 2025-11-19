@@ -154,11 +154,13 @@ const RealService = {
     
     createParametroValor: (p: Omit<ParametroValor, 'ID_Parametro'>): Promise<ParametroValor> => apiRequest('/parametros-valores', 'POST', p),
     updateParametroValor: (id: number, p: ParametroValor): Promise<ParametroValor> => apiRequest(`/parametros-valores/${id}`, 'PUT', p),
-    deleteParametroValor: (id: number): Promise<void> => apiRequest(`/parametros-valores/${id}`, 'DELETE'),
+    // Agora usa PUT para exclusão lógica
+    deleteParametroValor: (id: number, motivo: string): Promise<void> => apiRequest(`/parametros-valores/${id}`, 'PUT', { Excluido: true, MotivoExclusao: motivo }),
     
     createParametroTaxa: (p: Omit<ParametroTaxa, 'ID_Taxa'>): Promise<ParametroTaxa> => apiRequest('/parametros-taxas', 'POST', p),
     updateParametroTaxa: (id: number, p: ParametroTaxa): Promise<ParametroTaxa> => apiRequest(`/parametros-taxas/${id}`, 'PUT', p),
-    deleteParametroTaxa: (id: number): Promise<void> => apiRequest(`/parametros-taxas/${id}`, 'DELETE'),
+    // Agora usa PUT para exclusão lógica
+    deleteParametroTaxa: (id: number, motivo: string): Promise<void> => apiRequest(`/parametros-taxas/${id}`, 'PUT', { Excluido: true, MotivoExclusao: motivo }),
     
     // Método Deprecado (Mantido para compatibilidade, mas redirecionando para o novo fluxo)
     importCargasFromERP: async (sIni: string, sFim: string): Promise<{ message: string; count: number }> => {

@@ -1,4 +1,5 @@
 
+
 // Carrega as variáveis de ambiente do arquivo .env
 require('dotenv').config();
 
@@ -756,7 +757,8 @@ app.put('/lancamentos/:id', async (req, res) => { // Soft delete
 // PARÂMETROS - VALORES
 app.get('/parametros-valores', async (req, res) => {
     try {
-        const { rows } = await executeQuery(configOdin, 'SELECT * FROM ParametrosValores');
+        // CORREÇÃO: Filtrar apenas os não excluídos
+        const { rows } = await executeQuery(configOdin, 'SELECT * FROM ParametrosValores WHERE Excluido = 0');
         res.json(rows);
     } catch (error) { res.status(500).json({ message: error.message }); }
 });
@@ -774,30 +776,36 @@ app.post('/parametros-valores', async (req, res) => {
 });
 app.put('/parametros-valores/:id', async (req, res) => {
     const p = req.body;
-    const query = `UPDATE ParametrosValores SET Cidade=@cidade, TipoVeiculo=@tipo, ValorBase=@valor, KM=@km OUTPUT INSERTED.* WHERE ID_Parametro=@id;`;
-    const params = [
-        { name: 'id', type: TYPES.Int, value: req.params.id }, { name: 'cidade', type: TYPES.NVarChar, value: p.Cidade },
-        { name: 'tipo', type: TYPES.NVarChar, value: p.TipoVeiculo }, { name: 'valor', type: TYPES.Decimal, value: p.ValorBase, options: { precision: 18, scale: 2 } },
-        { name: 'km', type: TYPES.Int, value: p.KM }
-    ];
+    const id = req.params.id;
+    let query, params;
+
+    if (p.Excluido) { // Exclusão Lógica
+        query = `UPDATE ParametrosValores SET Excluido = 1, MotivoExclusao = @motivo OUTPUT INSERTED.* WHERE ID_Parametro = @id;`;
+        params = [
+            { name: 'id', type: TYPES.Int, value: id },
+            { name: 'motivo', type: TYPES.NVarChar, value: p.MotivoExclusao }
+        ];
+    } else { // Edição (com auditoria)
+        query = `UPDATE ParametrosValores SET Cidade=@cidade, TipoVeiculo=@tipo, ValorBase=@valor, KM=@km, MotivoAlteracao=@motivoAlt OUTPUT INSERTED.* WHERE ID_Parametro=@id;`;
+        params = [
+            { name: 'id', type: TYPES.Int, value: id }, { name: 'cidade', type: TYPES.NVarChar, value: p.Cidade },
+            { name: 'tipo', type: TYPES.NVarChar, value: p.TipoVeiculo }, { name: 'valor', type: TYPES.Decimal, value: p.ValorBase, options: { precision: 18, scale: 2 } },
+            { name: 'km', type: TYPES.Int, value: p.KM },
+            { name: 'motivoAlt', type: TYPES.NVarChar, value: p.MotivoAlteracao }
+        ];
+    }
+    
     try {
         const { rows } = await executeQuery(configOdin, query, params);
         res.json(rows[0]);
-    } catch (error) { res.status(500).json({ message: error.message }); }
-});
-app.delete('/parametros-valores/:id', async (req, res) => {
-    const query = `DELETE FROM ParametrosValores WHERE ID_Parametro=@id;`;
-    const params = [{ name: 'id', type: TYPES.Int, value: req.params.id }];
-    try {
-        await executeQuery(configOdin, query, params);
-        res.status(204).send();
     } catch (error) { res.status(500).json({ message: error.message }); }
 });
 
 // PARÂMETROS - TAXAS
 app.get('/parametros-taxas', async (req, res) => {
     try {
-        const { rows } = await executeQuery(configOdin, 'SELECT * FROM ParametrosTaxas');
+         // CORREÇÃO: Filtrar apenas os não excluídos
+        const { rows } = await executeQuery(configOdin, 'SELECT * FROM ParametrosTaxas WHERE Excluido = 0');
         res.json(rows);
     } catch (error) { res.status(500).json({ message: error.message }); }
 });
@@ -816,26 +824,32 @@ app.post('/parametros-taxas', async (req, res) => {
 });
 app.put('/parametros-taxas/:id', async (req, res) => {
     const p = req.body;
-    const query = `UPDATE ParametrosTaxas SET Cidade=@cidade, Pedagio=@ped, Balsa=@balsa, Ambiental=@amb, Chapa=@chapa, Outras=@outras OUTPUT INSERTED.* WHERE ID_Taxa=@id;`;
-    const params = [
-        { name: 'id', type: TYPES.Int, value: req.params.id }, { name: 'cidade', type: TYPES.NVarChar, value: p.Cidade },
-        { name: 'ped', type: TYPES.Decimal, value: p.Pedagio, options: { precision: 18, scale: 2 } }, { name: 'balsa', type: TYPES.Decimal, value: p.Balsa, options: { precision: 18, scale: 2 } },
-        { name: 'amb', type: TYPES.Decimal, value: p.Ambiental, options: { precision: 18, scale: 2 } }, { name: 'chapa', type: TYPES.Decimal, value: p.Chapa, options: { precision: 18, scale: 2 } },
-        { name: 'outras', type: TYPES.Decimal, value: p.Outras, options: { precision: 18, scale: 2 } }
-    ];
+    const id = req.params.id;
+    let query, params;
+
+    if (p.Excluido) { // Exclusão Lógica
+         query = `UPDATE ParametrosTaxas SET Excluido = 1, MotivoExclusao = @motivo OUTPUT INSERTED.* WHERE ID_Taxa = @id;`;
+         params = [
+            { name: 'id', type: TYPES.Int, value: id },
+            { name: 'motivo', type: TYPES.NVarChar, value: p.MotivoExclusao }
+         ];
+    } else { // Edição (com auditoria)
+        query = `UPDATE ParametrosTaxas SET Cidade=@cidade, Pedagio=@ped, Balsa=@balsa, Ambiental=@amb, Chapa=@chapa, Outras=@outras, MotivoAlteracao=@motivoAlt OUTPUT INSERTED.* WHERE ID_Taxa=@id;`;
+        params = [
+            { name: 'id', type: TYPES.Int, value: id }, { name: 'cidade', type: TYPES.NVarChar, value: p.Cidade },
+            { name: 'ped', type: TYPES.Decimal, value: p.Pedagio, options: { precision: 18, scale: 2 } }, { name: 'balsa', type: TYPES.Decimal, value: p.Balsa, options: { precision: 18, scale: 2 } },
+            { name: 'amb', type: TYPES.Decimal, value: p.Ambiental, options: { precision: 18, scale: 2 } }, { name: 'chapa', type: TYPES.Decimal, value: p.Chapa, options: { precision: 18, scale: 2 } },
+            { name: 'outras', type: TYPES.Decimal, value: p.Outras, options: { precision: 18, scale: 2 } },
+            { name: 'motivoAlt', type: TYPES.NVarChar, value: p.MotivoAlteracao }
+        ];
+    }
+
     try {
         const { rows } = await executeQuery(configOdin, query, params);
         res.json(rows[0]);
     } catch (error) { res.status(500).json({ message: error.message }); }
 });
-app.delete('/parametros-taxas/:id', async (req, res) => {
-    const query = `DELETE FROM ParametrosTaxas WHERE ID_Taxa=@id;`;
-    const params = [{ name: 'id', type: TYPES.Int, value: req.params.id }];
-    try {
-        await executeQuery(configOdin, query, params);
-        res.status(204).send();
-    } catch (error) { res.status(500).json({ message: error.message }); }
-});
+
 
 // MOTIVOS SUBSTITUIÇÃO (Static data from API)
 app.get('/motivos-substituicao', (req, res) => {

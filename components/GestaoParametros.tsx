@@ -1,7 +1,8 @@
+
 import React, { useState, useContext, useEffect, useMemo } from 'react';
 import { DataContext } from '../context/DataContext.tsx';
 import { ParametroValor, ParametroTaxa } from '../types.ts';
-import { PlusCircleIcon, PencilIcon, XCircleIcon, TrashIcon, ChevronUpIcon, ChevronDownIcon, CogIcon, CheckCircleIcon } from './icons.tsx';
+import { PlusCircleIcon, PencilIcon, XCircleIcon, TrashIcon, ChevronUpIcon, ChevronDownIcon, CogIcon, CheckCircleIcon, ExclamationIcon } from './icons.tsx';
 import { getCurrentMode, toggleMode } from '../services/apiService.ts';
 
 // --- Reusable Card Component ---
@@ -11,6 +12,62 @@ const ParametroCard: React.FC<{ title: string; children: React.ReactNode }> = ({
         {children}
     </div>
 );
+
+// --- Modal Component for Deletion ---
+const DeletionModal: React.FC<{
+    isOpen: boolean;
+    onClose: () => void;
+    onConfirm: (motivo: string) => void;
+    itemDescription: string;
+}> = ({ isOpen, onClose, onConfirm, itemDescription }) => {
+    const [motivo, setMotivo] = useState('');
+
+    useEffect(() => {
+        if (isOpen) setMotivo('');
+    }, [isOpen]);
+
+    if (!isOpen) return null;
+
+    const handleConfirm = () => {
+        if (motivo.trim()) {
+            onConfirm(motivo);
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+            <div className="bg-slate-800 rounded-lg shadow-xl p-6 w-full max-w-md">
+                <div className="flex items-start mb-4">
+                    <ExclamationIcon className="w-8 h-8 text-yellow-400 mr-3 shrink-0" />
+                    <div>
+                        <h2 className="text-xl font-bold text-white">Confirmar Exclusão</h2>
+                        <p className="text-slate-300 mt-1">Você está excluindo: <b>{itemDescription}</b>.</p>
+                        <p className="text-slate-400 text-sm mt-1">Para fins de auditoria, informe o motivo.</p>
+                    </div>
+                </div>
+                <textarea
+                    className="w-full bg-slate-700 text-white border border-slate-600 rounded-md p-2 focus:ring-red-500 focus:border-red-500"
+                    rows={3}
+                    value={motivo}
+                    onChange={(e) => setMotivo(e.target.value)}
+                    placeholder="Digite o motivo da exclusão..."
+                />
+                <div className="mt-6 flex justify-end space-x-3">
+                    <button onClick={onClose} className="bg-slate-600 hover:bg-slate-500 text-white font-bold py-2 px-4 rounded-md transition duration-200">
+                        Cancelar
+                    </button>
+                    <button
+                        onClick={handleConfirm}
+                        disabled={!motivo.trim()}
+                        className="bg-red-600 hover:bg-red-500 disabled:bg-red-800 disabled:cursor-not-allowed text-white font-bold py-2 px-4 rounded-md transition duration-200"
+                    >
+                        Excluir
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
 
 // --- Modal for Value Parameters ---
 const ValorModal: React.FC<{
@@ -23,6 +80,8 @@ const ValorModal: React.FC<{
     const [formData, setFormData] = useState<ParametroValor | null>(null);
     const [isManualCity, setIsManualCity] = useState(false);
 
+    const isEditing = formData && formData.ID_Parametro !== 0;
+
     useEffect(() => {
         setFormData(parametro);
         setIsManualCity(false);
@@ -30,7 +89,7 @@ const ValorModal: React.FC<{
 
     if (!isOpen || !formData) return null;
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
         setFormData({ ...formData, [name]: value });
     };
@@ -41,6 +100,11 @@ const ValorModal: React.FC<{
     };
 
     const handleSaveClick = () => {
+        if (isEditing && (!formData.MotivoAlteracao || !formData.MotivoAlteracao.trim())) {
+             alert("Para editar, é obrigatório informar o Motivo da Alteração.");
+             return;
+        }
+
         const processedData: ParametroValor = {
             ...formData,
             ValorBase: parseFloat(String(formData.ValorBase)) || 0,
@@ -53,10 +117,27 @@ const ValorModal: React.FC<{
         <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
             <div className="bg-slate-800 rounded-lg shadow-xl p-6 w-full max-w-lg">
                 <div className="flex justify-between items-center mb-6">
-                    <h2 className="text-xl font-bold text-white">{formData.ID_Parametro ? 'Editar Parâmetro' : 'Novo Parâmetro de Valor'}</h2>
+                    <h2 className="text-xl font-bold text-white">{isEditing ? 'Editar Parâmetro' : 'Novo Parâmetro de Valor'}</h2>
                     <button onClick={onClose}><XCircleIcon className="w-8 h-8 text-slate-400 hover:text-white"/></button>
                 </div>
                 <div className="space-y-4">
+                    {isEditing && (
+                        <div className="bg-yellow-900/20 border border-yellow-600/30 p-3 rounded-md mb-4">
+                            <label htmlFor="MotivoAlteracao" className="block text-sm font-bold text-yellow-400 mb-1">
+                                Motivo da Edição (Obrigatório)
+                            </label>
+                            <textarea
+                                name="MotivoAlteracao"
+                                id="MotivoAlteracao"
+                                rows={2}
+                                value={formData.MotivoAlteracao || ''}
+                                onChange={handleChange}
+                                className="w-full bg-slate-700 text-white border border-yellow-500/50 rounded-md p-2 focus:ring-yellow-500 focus:border-yellow-500 placeholder-slate-500"
+                                placeholder="Descreva por que este valor está sendo alterado..."
+                            />
+                        </div>
+                    )}
+
                      <div>
                         <label className="block text-sm font-medium text-slate-300 mb-1">Cidade</label>
                         <div className="flex gap-2">
@@ -129,6 +210,9 @@ const GestaoParametrosValores: React.FC = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [sortConfig, setSortConfig] = useState<{ key: keyof ParametroValor; direction: 'ascending' | 'descending' } | null>({ key: 'Cidade', direction: 'ascending' });
 
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [paramToDelete, setParamToDelete] = useState<ParametroValor | null>(null);
+
     const sortedAndFilteredParams = useMemo(() => {
         let filtered = parametrosValores.filter(p =>
             p.Cidade.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -163,7 +247,7 @@ const GestaoParametrosValores: React.FC = () => {
     };
 
     const handleOpenModalForEdit = (param: ParametroValor) => {
-        setEditingParam(param);
+        setEditingParam({ ...param, MotivoAlteracao: '' }); // Clear previous reason
         setIsModalOpen(true);
     };
 
@@ -190,13 +274,20 @@ const GestaoParametrosValores: React.FC = () => {
         }
     };
 
-    const handleDelete = async (id: number) => {
-        if(window.confirm('Tem certeza que deseja excluir este parâmetro?')) {
-            try {
-                await deleteParametroValor(id);
-            } catch (error) {
-                 alert('Erro ao excluir parâmetro: ' + error);
-            }
+    const handleDeleteClick = (param: ParametroValor) => {
+        setParamToDelete(param);
+        setIsDeleteModalOpen(true);
+    };
+
+    const handleConfirmDelete = async (motivo: string) => {
+        if (!paramToDelete) return;
+        try {
+            await deleteParametroValor(paramToDelete.ID_Parametro, motivo);
+        } catch (error) {
+            alert('Erro ao excluir parâmetro: ' + error);
+        } finally {
+            setIsDeleteModalOpen(false);
+            setParamToDelete(null);
         }
     };
     
@@ -213,6 +304,12 @@ const GestaoParametrosValores: React.FC = () => {
     return (
         <ParametroCard title="Parâmetros de Valores">
             <ValorModal isOpen={isModalOpen} onClose={handleCloseModal} onSave={handleSave} parametro={editingParam} />
+            <DeletionModal 
+                isOpen={isDeleteModalOpen} 
+                onClose={() => setIsDeleteModalOpen(false)} 
+                onConfirm={handleConfirmDelete}
+                itemDescription={paramToDelete ? `${paramToDelete.Cidade} - ${paramToDelete.TipoVeiculo}` : ''}
+            />
             <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-4">
                 <input
                     type="text"
@@ -253,7 +350,7 @@ const GestaoParametrosValores: React.FC = () => {
                                 <td className="p-2">{p.Cidade}</td><td className="p-2">{p.TipoVeiculo}</td><td className="p-2">{p.ValorBase.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}</td>
                                 <td className="p-2 flex gap-2">
                                      <button onClick={() => handleOpenModalForEdit(p)} className="text-sky-400 hover:text-sky-300"><PencilIcon className="w-5 h-5"/></button>
-                                     <button onClick={() => handleDelete(p.ID_Parametro)} className="text-red-400 hover:text-red-300"><TrashIcon className="w-5 h-5"/></button>
+                                     <button onClick={() => handleDeleteClick(p)} className="text-red-400 hover:text-red-300"><TrashIcon className="w-5 h-5"/></button>
                                 </td>
                             </tr>
                         ))}
@@ -277,6 +374,8 @@ const TaxaModal: React.FC<{
     const [formData, setFormData] = useState<ParametroTaxa | null>(null);
     const [isManualCity, setIsManualCity] = useState(false);
 
+    const isEditing = formData && formData.ID_Taxa !== 0;
+
     useEffect(() => {
         setFormData(parametro);
         setIsManualCity(false);
@@ -284,7 +383,7 @@ const TaxaModal: React.FC<{
 
     if (!isOpen || !formData) return null;
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
         setFormData({ ...formData, [name]: value });
     };
@@ -295,6 +394,11 @@ const TaxaModal: React.FC<{
     };
 
     const handleSaveClick = () => {
+        if (isEditing && (!formData.MotivoAlteracao || !formData.MotivoAlteracao.trim())) {
+            alert("Para editar, é obrigatório informar o Motivo da Alteração.");
+            return;
+        }
+
         const processedData: ParametroTaxa = {
             ...formData,
             Pedagio: parseFloat(String(formData.Pedagio)) || 0,
@@ -310,10 +414,27 @@ const TaxaModal: React.FC<{
         <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
             <div className="bg-slate-800 rounded-lg shadow-xl p-6 w-full max-w-lg">
                 <div className="flex justify-between items-center mb-6">
-                    <h2 className="text-xl font-bold text-white">{formData.ID_Taxa ? 'Editar Taxa' : 'Nova Taxa'}</h2>
+                    <h2 className="text-xl font-bold text-white">{isEditing ? 'Editar Taxa' : 'Nova Taxa'}</h2>
                     <button onClick={onClose}><XCircleIcon className="w-8 h-8 text-slate-400 hover:text-white"/></button>
                 </div>
                 <div className="space-y-4">
+                    {isEditing && (
+                        <div className="bg-yellow-900/20 border border-yellow-600/30 p-3 rounded-md mb-4">
+                            <label htmlFor="MotivoAlteracao" className="block text-sm font-bold text-yellow-400 mb-1">
+                                Motivo da Edição (Obrigatório)
+                            </label>
+                            <textarea
+                                name="MotivoAlteracao"
+                                id="MotivoAlteracao"
+                                rows={2}
+                                value={formData.MotivoAlteracao || ''}
+                                onChange={handleChange}
+                                className="w-full bg-slate-700 text-white border border-yellow-500/50 rounded-md p-2 focus:ring-yellow-500 focus:border-yellow-500 placeholder-slate-500"
+                                placeholder="Descreva por que esta taxa está sendo alterada..."
+                            />
+                        </div>
+                    )}
+
                      <div>
                         <label className="block text-sm font-medium text-slate-300 mb-1">Cidade</label>
                         <div className="flex gap-2">
@@ -391,6 +512,9 @@ const GestaoParametrosTaxas: React.FC = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [sortConfig, setSortConfig] = useState<{ key: keyof ParametroTaxa | 'Total'; direction: 'ascending' | 'descending' } | null>({ key: 'Cidade', direction: 'ascending' });
 
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [paramToDelete, setParamToDelete] = useState<ParametroTaxa | null>(null);
+
     const sortedAndFilteredParams = useMemo(() => {
         let filtered = parametrosTaxas.filter(p =>
             p.Cidade.toLowerCase().includes(searchTerm.toLowerCase())
@@ -398,8 +522,8 @@ const GestaoParametrosTaxas: React.FC = () => {
 
         if (sortConfig !== null) {
             filtered.sort((a, b) => {
-                let aValue: string | number;
-                let bValue: string | number;
+                let aValue: any;
+                let bValue: any;
     
                 if (sortConfig.key === 'Total') {
                     aValue = a.Pedagio + a.Balsa + a.Ambiental + a.Chapa + a.Outras;
@@ -442,7 +566,7 @@ const GestaoParametrosTaxas: React.FC = () => {
     };
 
     const handleOpenModalForEdit = (param: ParametroTaxa) => {
-        setEditingParam(param);
+        setEditingParam({ ...param, MotivoAlteracao: '' });
         setIsModalOpen(true);
     };
 
@@ -469,19 +593,32 @@ const GestaoParametrosTaxas: React.FC = () => {
         }
     };
 
-    const handleDelete = async (id: number) => {
-         if(window.confirm('Tem certeza que deseja excluir este parâmetro de taxa?')) {
-             try {
-                await deleteParametroTaxa(id);
-            } catch (error) {
-                 alert('Erro ao excluir taxa: ' + error);
-            }
+    const handleDeleteClick = (param: ParametroTaxa) => {
+        setParamToDelete(param);
+        setIsDeleteModalOpen(true);
+    };
+
+    const handleConfirmDelete = async (motivo: string) => {
+        if (!paramToDelete) return;
+        try {
+            await deleteParametroTaxa(paramToDelete.ID_Taxa, motivo);
+        } catch (error) {
+            alert('Erro ao excluir taxa: ' + error);
+        } finally {
+            setIsDeleteModalOpen(false);
+            setParamToDelete(null);
         }
     };
     
     return (
          <ParametroCard title="Parâmetros de Taxas">
              <TaxaModal isOpen={isModalOpen} onClose={handleCloseModal} onSave={handleSave} parametro={editingParam} />
+             <DeletionModal 
+                isOpen={isDeleteModalOpen} 
+                onClose={() => setIsDeleteModalOpen(false)} 
+                onConfirm={handleConfirmDelete}
+                itemDescription={paramToDelete ? `Taxas de ${paramToDelete.Cidade}` : ''}
+            />
              <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-4">
                 <input
                     type="text"
@@ -520,7 +657,7 @@ const GestaoParametrosTaxas: React.FC = () => {
                                 <td className="p-2">{total.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}</td>
                                 <td className="p-2 flex gap-2">
                                      <button onClick={() => handleOpenModalForEdit(p)} className="text-sky-400 hover:text-sky-300"><PencilIcon className="w-5 h-5"/></button>
-                                     <button onClick={() => handleDelete(p.ID_Taxa)} className="text-red-400 hover:text-red-300"><TrashIcon className="w-5 h-5"/></button>
+                                     <button onClick={() => handleDeleteClick(p)} className="text-red-400 hover:text-red-300"><TrashIcon className="w-5 h-5"/></button>
                                 </td>
                             </tr>
                         )})}
@@ -682,3 +819,4 @@ export const GestaoParametros: React.FC = () => {
         </div>
     );
 };
+    

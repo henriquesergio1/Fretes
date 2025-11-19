@@ -252,6 +252,12 @@ export const LancamentoFrete: React.FC<LancamentoFreteProps> = ({ setView }) => 
     const handleConfirmarLancamento = () => {
         if (!selectedVeiculoId || !calculoFrete) return;
 
+        // Validação de Valor Zerado
+        if (calculoFrete.ValorTotal <= 0) {
+            setError("Não é possível salvar um lançamento com valor total zero. Verifique os parâmetros para esta cidade e veículo.");
+            return;
+        }
+
         const lancamentoData: NewLancamento = {
             DataFrete: dataFrete,
             ID_Veiculo: selectedVeiculoId,
@@ -356,6 +362,7 @@ export const LancamentoFrete: React.FC<LancamentoFreteProps> = ({ setView }) => 
                     </div>
                 );
             case 3:
+                const isZeroValue = calculoFrete && calculoFrete.ValorTotal === 0;
                 return (
                     <div>
                         <h3 className="text-lg font-semibold text-white mb-4">3. Resumo e Cálculo</h3>
@@ -379,7 +386,22 @@ export const LancamentoFrete: React.FC<LancamentoFreteProps> = ({ setView }) => 
                                     <div className="flex justify-between py-2 border-b border-slate-700"><span className="text-slate-400">Total Pedágio:</span> <span className="font-mono">{calculoFrete.Pedagio.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span></div>
                                     <div className="flex justify-between py-2 border-b border-slate-700"><span className="text-slate-400">Total Balsa:</span> <span className="font-mono">{calculoFrete.Balsa.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span></div>
                                     <div className="flex justify-between py-2 border-b border-slate-700"><span className="text-slate-400">Outras Taxas:</span> <span className="font-mono">{(calculoFrete.Ambiental + calculoFrete.Chapa + calculoFrete.Outras).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span></div>
-                                    <div className="flex justify-between pt-3 text-lg"><span className="font-bold text-white">VALOR TOTAL:</span> <span className="font-bold text-green-400">{calculoFrete.ValorTotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span></div>
+                                    <div className="flex justify-between pt-3 text-lg"><span className="font-bold text-white">VALOR TOTAL:</span> <span className={`font-bold ${isZeroValue ? 'text-red-500' : 'text-green-400'}`}>{calculoFrete.ValorTotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span></div>
+                                    
+                                    {isZeroValue && (
+                                        <div className="mt-4 p-3 bg-red-900/50 text-red-200 border border-red-700/50 rounded-md flex items-start">
+                                            <ExclamationIcon className="w-5 h-5 mr-2 mt-0.5 flex-shrink-0"/>
+                                            <div>
+                                                <p className="font-bold">Valor do Frete Zerado!</p>
+                                                <p className="text-xs mt-1">
+                                                    Não foi encontrado um valor base para <b>{calculoFrete.CidadeBase}</b> com o tipo de veículo <b>{selectedVeiculo?.TipoVeiculo}</b>.
+                                                </p>
+                                                <p className="text-xs mt-1">
+                                                    Por favor, cadastre os valores na tela de <b>Parâmetros</b> antes de prosseguir.
+                                                </p>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             )}
                              {isEditing && (
@@ -474,8 +496,14 @@ export const LancamentoFrete: React.FC<LancamentoFreteProps> = ({ setView }) => 
                 {step === 3 && (
                     <button
                         onClick={handleConfirmarLancamento}
-                        disabled={loading.save || !!successMessage || (isEditing && !motivoEdicao)}
-                        className="bg-green-600 hover:bg-green-500 disabled:bg-green-800 disabled:cursor-not-allowed text-white font-bold py-2 px-4 rounded-md transition duration-200 flex items-center"
+                        disabled={
+                            loading.save || 
+                            !!successMessage || 
+                            (isEditing && !motivoEdicao) ||
+                            (calculoFrete?.ValorTotal === 0)
+                        }
+                        className="bg-green-600 hover:bg-green-500 disabled:bg-green-800 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-2 px-4 rounded-md transition duration-200 flex items-center"
+                        title={calculoFrete?.ValorTotal === 0 ? "Não é possível salvar com valor zerado" : "Salvar Lançamento"}
                     >
                         {loading.save ? <SpinnerIcon className="w-5 h-5 mr-2" /> : <CheckCircleIcon className="w-5 h-5 mr-2" />}
                         {loading.save ? "Salvando..." : (isEditing ? 'Atualizar Lançamento' : 'Confirmar e Salvar')}

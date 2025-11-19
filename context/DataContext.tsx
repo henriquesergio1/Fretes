@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { Veiculo, ParametroValor, ParametroTaxa, Carga, Lancamento, NewLancamento, SystemConfig } from '../types.ts';
 import * as api from '../services/apiService.ts';
@@ -33,11 +34,11 @@ interface DataContextType {
 
     addParametroValor: (param: Omit<ParametroValor, 'ID_Parametro'>) => Promise<void>;
     updateParametroValor: (param: ParametroValor) => Promise<void>;
-    deleteParametroValor: (id: number) => Promise<void>;
+    deleteParametroValor: (id: number, motivo: string) => Promise<void>;
     
     addParametroTaxa: (param: Omit<ParametroTaxa, 'ID_Taxa'>) => Promise<void>;
     updateParametroTaxa: (param: ParametroTaxa) => Promise<void>;
-    deleteParametroTaxa: (id: number) => Promise<void>;
+    deleteParametroTaxa: (id: number, motivo: string) => Promise<void>;
 }
 
 export const DataContext = createContext<DataContextType>({} as DataContextType);
@@ -199,8 +200,9 @@ export const DataProvider: React.FC<{children: ReactNode}> = ({ children }) => {
         const updatedParam = await api.updateParametroValor(param.ID_Parametro, param);
         setParametrosValores(prev => prev.map(p => p.ID_Parametro === param.ID_Parametro ? updatedParam : p));
     };
-    const deleteParametroValor = async (id: number) => {
-        await api.deleteParametroValor(id);
+    const deleteParametroValor = async (id: number, motivo: string) => {
+        await api.deleteParametroValor(id, motivo);
+        // Exclusão lógica no estado
         setParametrosValores(prev => prev.filter(p => p.ID_Parametro !== id));
     };
 
@@ -212,8 +214,9 @@ export const DataProvider: React.FC<{children: ReactNode}> = ({ children }) => {
         const updatedParam = await api.updateParametroTaxa(param.ID_Taxa, param);
         setParametrosTaxas(prev => prev.map(p => p.ID_Taxa === param.ID_Taxa ? updatedParam : p));
     };
-    const deleteParametroTaxa = async (id: number) => {
-        await api.deleteParametroTaxa(id);
+    const deleteParametroTaxa = async (id: number, motivo: string) => {
+        await api.deleteParametroTaxa(id, motivo);
+         // Exclusão lógica no estado
         setParametrosTaxas(prev => prev.filter(p => p.ID_Taxa !== id));
     };
 
