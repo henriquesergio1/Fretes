@@ -1,5 +1,5 @@
 import React, { createContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import { Veiculo, ParametroValor, ParametroTaxa, Carga, Lancamento, NewLancamento } from '../types.ts';
+import { Veiculo, ParametroValor, ParametroTaxa, Carga, Lancamento, NewLancamento, SystemConfig } from '../types.ts';
 import * as api from '../services/apiService.ts';
 
 interface DataContextType {
@@ -13,9 +13,11 @@ interface DataContextType {
     editingLancamento: Lancamento | null;
     loading: boolean;
     error: string | null;
+    systemConfig: SystemConfig;
 
     setEditingLancamento: (lancamento: Lancamento | null) => void;
     reloadData: (dataType: 'veiculos' | 'cargas' | 'parametrosValores' | 'parametrosTaxas' | 'lancamentos' | 'all') => Promise<void>;
+    updateSystemConfig: (config: SystemConfig) => void;
     
     // CRUD operations
     addLancamento: (lancamento: NewLancamento) => Promise<Lancamento>;
@@ -53,6 +55,17 @@ export const DataProvider: React.FC<{children: ReactNode}> = ({ children }) => {
     const [editingLancamento, setEditingLancamento] = useState<Lancamento | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+
+    // System Config State (Persisted in LocalStorage)
+    const [systemConfig, setSystemConfig] = useState<SystemConfig>(() => {
+        const saved = localStorage.getItem('SYSTEM_CONFIG');
+        return saved ? JSON.parse(saved) : { companyName: 'Fretes', logoUrl: '' };
+    });
+
+    const updateSystemConfig = useCallback((config: SystemConfig) => {
+        setSystemConfig(config);
+        localStorage.setItem('SYSTEM_CONFIG', JSON.stringify(config));
+    }, []);
 
     const loadInitialData = useCallback(async () => {
         try {
@@ -216,8 +229,10 @@ export const DataProvider: React.FC<{children: ReactNode}> = ({ children }) => {
             editingLancamento,
             loading,
             error,
+            systemConfig,
             setEditingLancamento,
             reloadData,
+            updateSystemConfig,
             addLancamento,
             updateLancamento,
             deleteLancamento,

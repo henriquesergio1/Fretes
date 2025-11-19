@@ -1,3 +1,4 @@
+
 export interface Veiculo {
   ID_Veiculo: number;
   COD_Veiculo: string;
@@ -6,6 +7,7 @@ export interface Veiculo {
   Motorista: string;
   CapacidadeKG: number;
   Ativo: boolean;
+  Origem?: 'ERP' | 'CSV' | 'Manual';
 }
 
 export interface Carga {
@@ -68,3 +70,21 @@ export interface Lancamento {
 }
 
 export type NewLancamento = Omit<Lancamento, 'ID_Lancamento'>;
+
+export interface SystemConfig {
+    companyName: string;
+    logoUrl: string;
+}
+
+// Interfaces para Importação de Veículos
+export interface VehicleConflict {
+    erp: Veiculo;
+    local: Veiculo;
+    action: 'overwrite' | 'skip'; // Decisão do usuário
+}
+
+export interface VehicleCheckResult {
+    newVehicles: Veiculo[];
+    conflicts: VehicleConflict[];
+    message: string;
+}

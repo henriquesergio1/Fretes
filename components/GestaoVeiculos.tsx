@@ -1,7 +1,25 @@
+
 import React, { useState, useMemo, useContext, useEffect } from 'react';
 import { Veiculo } from '../types.ts';
 import { DataContext } from '../context/DataContext.tsx';
 import { PlusCircleIcon, PencilIcon, XCircleIcon, CheckCircleIcon } from './icons.tsx';
+
+// --- Tag Component for Veiculo Origin ---
+const OrigemTag: React.FC<{ origem?: 'ERP' | 'CSV' | 'Manual' }> = ({ origem }) => {
+    if (!origem) return null;
+
+    const styles = {
+        ERP: 'bg-purple-500/20 text-purple-300 border border-purple-500/30',
+        CSV: 'bg-orange-500/20 text-orange-300 border border-orange-500/30',
+        Manual: 'bg-green-500/20 text-green-300 border border-green-500/30',
+    };
+
+    return (
+        <span className={`ml-2 px-2 py-0.5 text-xs font-semibold rounded-full ${styles[origem] || styles.Manual}`}>
+            {origem}
+        </span>
+    );
+};
 
 // --- Modal Component for Editing/Creating Vehicles ---
 const VeiculoModal: React.FC<{
@@ -168,6 +186,7 @@ export const GestaoVeiculos: React.FC = () => {
             Motorista: '',
             CapacidadeKG: 0,
             Ativo: true,
+            Origem: 'Manual'
         });
         setIsModalOpen(true);
     };
@@ -238,7 +257,10 @@ export const GestaoVeiculos: React.FC = () => {
                         <tbody>
                             {filteredVeiculos.map(veiculo => (
                                 <tr key={veiculo.ID_Veiculo} className="bg-slate-800 border-b border-slate-700 hover:bg-slate-700/50">
-                                    <td className="p-4 font-medium text-white">{veiculo.Placa}</td>
+                                    <td className="p-4 font-medium text-white">
+                                        {veiculo.Placa}
+                                        <OrigemTag origem={veiculo.Origem} />
+                                    </td>
                                     <td className="p-4">{veiculo.Motorista}</td>
                                     <td className="p-4">{veiculo.TipoVeiculo}</td>
                                     <td className="p-4">{veiculo.CapacidadeKG.toLocaleString('pt-BR')} kg</td>

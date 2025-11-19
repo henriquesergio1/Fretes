@@ -419,7 +419,7 @@ export const GestaoCargas: React.FC = () => {
                                             <span>{carga.NumeroCarga}</span>
                                             <OrigemTag origem={carga.Origem} />
                                             {carga.MotivoAlteracao && !showOnlyExcluded && (
-                                                <span title={`Última alteração: ${carga.MotivoAlteracao}`} className="text-xs text-yellow-500 cursor-help border border-yellow-500/50 rounded px-1">Edited</span>
+                                                <span title={`Última alteração: ${carga.MotivoAlteracao}`} className="text-xs text-yellow-500 cursor-help border border-yellow-500/50 rounded px-1">Editado</span>
                                             )}
                                         </div>
                                     </td>

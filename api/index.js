@@ -1,4 +1,6 @@
 
+
+
 // Carrega as variáveis de ambiente do arquivo .env
 require('dotenv').config();
 
@@ -90,13 +92,15 @@ app.get('/veiculos', async (req, res) => {
 
 app.post('/veiculos', async (req, res) => {
     const v = req.body;
-    const query = `INSERT INTO Veiculos (COD_Veiculo, Placa, TipoVeiculo, Motorista, CapacidadeKG, Ativo) 
+    // Adicionado Origem
+    const query = `INSERT INTO Veiculos (COD_Veiculo, Placa, TipoVeiculo, Motorista, CapacidadeKG, Ativo, Origem) 
                    OUTPUT INSERTED.* 
-                   VALUES (@cod, @placa, @tipo, @motorista, @cap, @ativo);`;
+                   VALUES (@cod, @placa, @tipo, @motorista, @cap, @ativo, @origem);`;
     const params = [
         { name: 'cod', type: TYPES.NVarChar, value: v.COD_Veiculo }, { name: 'placa', type: TYPES.NVarChar, value: v.Placa },
         { name: 'tipo', type: TYPES.NVarChar, value: v.TipoVeiculo }, { name: 'motorista', type: TYPES.NVarChar, value: v.Motorista },
-        { name: 'cap', type: TYPES.Int, value: v.CapacidadeKG }, { name: 'ativo', type: TYPES.Bit, value: v.Ativo }
+        { name: 'cap', type: TYPES.Int, value: v.CapacidadeKG }, { name: 'ativo', type: TYPES.Bit, value: v.Ativo },
+        { name: 'origem', type: TYPES.NVarChar, value: v.Origem || 'Manual' }
     ];
     try {
         const { rows } = await executeQuery(configOdin, query, params);
@@ -119,6 +123,154 @@ app.put('/veiculos/:id', async (req, res) => {
         const { rows } = await executeQuery(configOdin, query, params);
         res.json(rows[0]);
     } catch (error) { res.status(500).json({ message: error.message }); }
+});
+
+// --- IMPORTAÇÃO DE VEÍCULOS DO ERP ---
+
+// 1. CHECAGEM: Compara ERP vs Local
+app.get('/veiculos-erp/check', async (req, res) => {
+    try {
+        // Busca veículos do ERP usando a query fornecida (com JOINs para motorista, modelo e status)
+        const erpQuery = `
+            SELECT 
+                v.codvec AS COD_VEICULO,
+                v.numplcvec AS PLACA,
+                RTRIM(m.desmdlvec) AS TIPO,
+                RTRIM(c.nomepg) AS MOTORISTA,
+                v.valcdepsovec AS CAPACIDADE_KG,
+                CASE 
+                    WHEN v.INDSTUVEC = '1' THEN 'Ativo' 
+                    ELSE 'Inativo' 
+                END AS STATUS_ATIVO
+            FROM flexx10071188.dbo.ibetvec v WITH(NOLOCK)
+            LEFT JOIN flexx10071188.dbo.IBETTPLPDRVEC t WITH(NOLOCK)
+                ON v.codvec = t.codvec
+            LEFT JOIN flexx10071188.dbo.IBETCPLEPG c WITH(NOLOCK)
+                ON t.codmtcepg = c.codmtcepg
+            LEFT JOIN flexx10071188.dbo.IBETDOMMDLVEC m WITH(NOLOCK)
+                ON v.tpomdlvec = m.tpomdlvec
+            WHERE c.tpoepg = 'm'
+        `;
+        const { rows: erpVehicles } = await executeQuery(configErp, erpQuery);
+        
+        if (erpVehicles.length === 0) {
+            return res.json({ newVehicles: [], conflicts: [], message: 'Nenhum veículo de motorista (tipo M) encontrado no ERP.' });
+        }
+
+        // Busca veículos locais
+        const { rows: localVehicles } = await executeQuery(configOdin, 'SELECT * FROM Veiculos');
+        const localMap = new Map();
+        localVehicles.forEach(v => localMap.set(v.COD_Veiculo.trim().toUpperCase(), v));
+
+        const newVehicles = [];
+        const conflicts = [];
+
+        erpVehicles.forEach(erpV => {
+            // Mapeamento seguro dos campos retornados pela query
+            const cod = String(erpV.COD_VEICULO).trim().toUpperCase();
+            const placa = String(erpV.PLACA || '').trim().toUpperCase();
+            const tipo = String(erpV.TIPO || 'PADRÃO').trim();
+            const motorista = String(erpV.MOTORISTA || 'N/A').trim();
+            const capacidade = Number(erpV.CAPACIDADE_KG) || 0;
+            const ativo = erpV.STATUS_ATIVO === 'Ativo';
+
+            const normalizedErp = {
+                COD_Veiculo: cod,
+                Placa: placa,
+                TipoVeiculo: tipo,
+                Motorista: motorista,
+                CapacidadeKG: capacidade,
+                Ativo: ativo,
+                Origem: 'ERP'
+            };
+
+            if (localMap.has(cod)) {
+                const localV = localMap.get(cod);
+                // Adiciona à lista de conflitos para decisão do usuário
+                conflicts.push({
+                    local: localV,
+                    erp: normalizedErp,
+                    action: 'skip' // Padrão: não sobrescrever
+                });
+            } else {
+                newVehicles.push(normalizedErp);
+            }
+        });
+
+        res.json({ newVehicles, conflicts, message: 'Checagem concluída.' });
+
+    } catch (error) {
+        console.error("Erro ao checar veículos ERP:", error);
+        res.status(500).json({ message: `Erro ao consultar ERP: ${error.message}.` });
+    }
+});
+
+// 2. SINCRONIZAÇÃO: Executa inserções e updates
+app.post('/veiculos-erp/sync', async (req, res) => {
+    const { newVehicles, vehiclesToUpdate } = req.body;
+    
+    const connection = new Connection(configOdin);
+    connection.connect(err => {
+        if (err) return res.status(500).json({ message: `Erro de conexão: ${err.message}` });
+        
+        connection.beginTransaction(async err => {
+            if (err) {
+                connection.close();
+                return res.status(500).json({ message: `Erro na transação: ${err.message}` });
+            }
+
+            try {
+                // 1. INSERIR NOVOS (Definindo Origem = 'ERP')
+                for (const v of newVehicles) {
+                    const insertQ = `INSERT INTO Veiculos (COD_Veiculo, Placa, TipoVeiculo, Motorista, CapacidadeKG, Ativo, Origem) VALUES (@cod, @placa, @tipo, @mot, @cap, @ativo, 'ERP')`;
+                    await new Promise((resolve, reject) => {
+                        const reqIns = new Request(insertQ, (err) => err ? reject(err) : resolve());
+                        reqIns.addParameter('cod', TYPES.NVarChar, v.COD_Veiculo);
+                        reqIns.addParameter('placa', TYPES.NVarChar, v.Placa);
+                        reqIns.addParameter('tipo', TYPES.NVarChar, v.TipoVeiculo);
+                        reqIns.addParameter('mot', TYPES.NVarChar, v.Motorista);
+                        reqIns.addParameter('cap', TYPES.Int, v.CapacidadeKG || 0);
+                        reqIns.addParameter('ativo', TYPES.Bit, v.Ativo);
+                        connection.execSql(reqIns);
+                    });
+                }
+
+                // 2. ATUALIZAR EXISTENTES (Sobrescrever)
+                for (const v of vehiclesToUpdate) {
+                     // Atualiza Placa, Tipo, Motorista, Capacidade e Status
+                    const updateQ = `UPDATE Veiculos SET Placa=@placa, TipoVeiculo=@tipo, Motorista=@mot, CapacidadeKG=@cap, Ativo=@ativo WHERE COD_Veiculo=@cod`;
+                    await new Promise((resolve, reject) => {
+                        const reqUpd = new Request(updateQ, (err) => err ? reject(err) : resolve());
+                        reqUpd.addParameter('placa', TYPES.NVarChar, v.Placa);
+                        reqUpd.addParameter('tipo', TYPES.NVarChar, v.TipoVeiculo);
+                        reqUpd.addParameter('mot', TYPES.NVarChar, v.Motorista);
+                        reqUpd.addParameter('cap', TYPES.Int, v.CapacidadeKG || 0);
+                        reqUpd.addParameter('ativo', TYPES.Bit, v.Ativo);
+                        reqUpd.addParameter('cod', TYPES.NVarChar, v.COD_Veiculo);
+                        connection.execSql(reqUpd);
+                    });
+                }
+
+                connection.commitTransaction(err => {
+                    if (err) {
+                        connection.rollbackTransaction(() => connection.close());
+                        return res.status(500).json({ message: `Erro no commit: ${err.message}` });
+                    }
+                    res.json({ 
+                        message: 'Sincronização concluída com sucesso.', 
+                        count: newVehicles.length + vehiclesToUpdate.length 
+                    });
+                    connection.close();
+                });
+
+            } catch (error) {
+                connection.rollbackTransaction(() => {
+                    connection.close();
+                    res.status(500).json({ message: `Erro na sincronização: ${error.message}` });
+                });
+            }
+        });
+    });
 });
 
 

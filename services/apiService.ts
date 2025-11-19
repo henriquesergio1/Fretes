@@ -1,4 +1,5 @@
-import { Veiculo, Carga, ParametroValor, ParametroTaxa, MotivoSubstituicao, Lancamento, NewLancamento } from '../types.ts';
+
+import { Veiculo, Carga, ParametroValor, ParametroTaxa, MotivoSubstituicao, Lancamento, NewLancamento, VehicleCheckResult, VehicleConflict } from '../types.ts';
 import * as mockApi from '../api/mockData.ts';
 import Papa from 'papaparse';
 
@@ -149,6 +150,15 @@ const RealService = {
     importCargasFromERP: async (sIni: string, sFim: string): Promise<{ message: string; count: number }> => {
         return apiRequest('/cargas-erp/import', 'POST', { sIni, sFim });
     },
+
+    // Novos métodos para Veículos ERP
+    checkVeiculosERP: async (): Promise<VehicleCheckResult> => {
+        return apiGet('/veiculos-erp/check');
+    },
+
+    syncVeiculosERP: async (newVehicles: Veiculo[], vehiclesToUpdate: Veiculo[]): Promise<{ message: string, count: number }> => {
+        return apiRequest('/veiculos-erp/sync', 'POST', { newVehicles, vehiclesToUpdate });
+    },
     
     importData: async (file: File, type: string): Promise<any> => {
         throw new Error("A importação de CSV ainda não está implementada no backend real.");
@@ -187,6 +197,38 @@ const MockService = {
     deleteParametroTaxa: mockApi.deleteMockParametroTaxa,
     
     importCargasFromERP: mockApi.importMockCargasFromERP,
+
+    // Mock para importação de veículos
+    checkVeiculosERP: async (): Promise<VehicleCheckResult> => {
+        return new Promise((resolve) => {
+            setTimeout(() => {
+                resolve({
+                    newVehicles: [
+                        { ID_Veiculo: 0, COD_Veiculo: 'V_ERP_NEW1', Placa: 'NEW-9999', TipoVeiculo: 'Truck', Motorista: 'Motorista ERP Novo', CapacidadeKG: 10000, Ativo: true }
+                    ],
+                    conflicts: [
+                        {
+                            local: { ID_Veiculo: 1, COD_Veiculo: 'TRUCK001', Placa: 'ABC-1234', TipoVeiculo: 'Carreta', Motorista: 'João da Silva', CapacidadeKG: 25000, Ativo: true },
+                            erp: { ID_Veiculo: 0, COD_Veiculo: 'TRUCK001', Placa: 'ABC-1234', TipoVeiculo: 'Carreta ERP', Motorista: 'João Atualizado ERP', CapacidadeKG: 26000, Ativo: true },
+                            action: 'skip'
+                        }
+                    ],
+                    message: 'Verificação Mock concluída'
+                });
+            }, 1000);
+        });
+    },
+
+    syncVeiculosERP: async (newVehicles: Veiculo[], vehiclesToUpdate: Veiculo[]): Promise<{ message: string, count: number }> => {
+        return new Promise((resolve) => {
+            setTimeout(() => {
+                resolve({
+                    message: `(MOCK) Importação concluída. ${newVehicles.length} inseridos, ${vehiclesToUpdate.length} atualizados.`,
+                    count: newVehicles.length + vehiclesToUpdate.length
+                });
+            }, 1000);
+        });
+    },
     
     importData: async (file: File, type: string): Promise<{ message: string; count: number }> => {
         return new Promise((resolve, reject) => {
@@ -235,4 +277,8 @@ export const updateParametroTaxa = USE_MOCK ? MockService.updateParametroTaxa : 
 export const deleteParametroTaxa = USE_MOCK ? MockService.deleteParametroTaxa : RealService.deleteParametroTaxa;
 
 export const importCargasFromERP = USE_MOCK ? MockService.importCargasFromERP : RealService.importCargasFromERP;
+
+export const checkVeiculosERP = USE_MOCK ? MockService.checkVeiculosERP : RealService.checkVeiculosERP;
+export const syncVeiculosERP = USE_MOCK ? MockService.syncVeiculosERP : RealService.syncVeiculosERP;
+
 export const importData = USE_MOCK ? MockService.importData : RealService.importData;

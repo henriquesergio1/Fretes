@@ -1,3 +1,4 @@
+
 -- =================================================================================
 -- SCRIPT DE CRIAÇÃO COMPLETA DO BANCO DE DADOS PARA O SISTEMA DE GESTÃO DE FRETES
 -- Dialeto: Transact-SQL (T-SQL) para Microsoft SQL Server
@@ -45,7 +46,8 @@ CREATE TABLE Veiculos (
     TipoVeiculo NVARCHAR(50) NOT NULL,
     Motorista NVARCHAR(100) NOT NULL,
     CapacidadeKG INT,
-    Ativo BIT NOT NULL DEFAULT 1
+    Ativo BIT NOT NULL DEFAULT 1,
+    Origem NVARCHAR(20) DEFAULT 'Manual' -- Origem do cadastro: 'Manual', 'ERP', 'CSV'
 );
 GO
 

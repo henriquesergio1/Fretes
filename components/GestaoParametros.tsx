@@ -583,14 +583,97 @@ const SystemControl: React.FC = () => {
 };
 
 
+// --- System Branding Component ---
+const SystemBranding: React.FC = () => {
+    const { systemConfig, updateSystemConfig } = useContext(DataContext);
+    const [name, setName] = useState(systemConfig.companyName);
+    const [logo, setLogo] = useState(systemConfig.logoUrl);
+    const [isSaved, setIsSaved] = useState(false);
+
+    useEffect(() => {
+        setName(systemConfig.companyName);
+        setLogo(systemConfig.logoUrl);
+    }, [systemConfig]);
+
+    const handleSave = () => {
+        updateSystemConfig({ companyName: name, logoUrl: logo });
+        setIsSaved(true);
+        setTimeout(() => setIsSaved(false), 2000);
+    };
+
+    return (
+        <div className="bg-slate-800 p-6 rounded-lg shadow-lg border border-slate-700 mb-8">
+            <div className="flex items-center mb-4">
+                <CogIcon className="w-8 h-8 text-sky-400 mr-4" />
+                <div>
+                    <h3 className="text-lg font-semibold text-white">Identidade Visual</h3>
+                    <p className="text-sm text-slate-400">Personalize o nome e o logo da sua empresa exibidos no menu.</p>
+                </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                    <div>
+                        <label className="block text-sm font-medium text-slate-300 mb-1">Nome da Empresa</label>
+                        <input 
+                            type="text" 
+                            value={name} 
+                            onChange={(e) => setName(e.target.value)}
+                            className="w-full bg-slate-700 text-white border border-slate-600 rounded-md p-2 focus:ring-sky-500 focus:border-sky-500"
+                            placeholder="Ex: Minha Transportadora"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-slate-300 mb-1">URL do Logo (Imagem)</label>
+                        <input 
+                            type="text" 
+                            value={logo} 
+                            onChange={(e) => setLogo(e.target.value)}
+                            className="w-full bg-slate-700 text-white border border-slate-600 rounded-md p-2 focus:ring-sky-500 focus:border-sky-500"
+                            placeholder="https://exemplo.com/logo.png"
+                        />
+                        <p className="text-xs text-slate-500 mt-1">Recomendado: Imagem PNG transparente, quadrada ou horizontal.</p>
+                    </div>
+                    <button 
+                        onClick={handleSave}
+                        className="bg-sky-600 hover:bg-sky-500 text-white font-bold py-2 px-4 rounded-md transition duration-200 flex items-center"
+                    >
+                        {isSaved ? <CheckCircleIcon className="w-5 h-5 mr-2" /> : null}
+                        {isSaved ? 'Salvo!' : 'Salvar Configurações'}
+                    </button>
+                </div>
+
+                {/* Preview Area */}
+                <div className="bg-slate-900 rounded-lg p-6 flex flex-col items-center justify-center border border-slate-700">
+                    <p className="text-xs text-slate-500 mb-4 uppercase tracking-wider">Pré-visualização do Menu</p>
+                    <div className="bg-slate-800 w-48 p-4 rounded-md border border-slate-700 flex flex-col items-center">
+                         {logo ? (
+                            <img src={logo} alt="Logo Preview" className="h-12 object-contain mb-2" onError={(e) => (e.currentTarget.style.display = 'none')} />
+                        ) : (
+                             <div className="h-12 w-12 bg-slate-700 rounded-full flex items-center justify-center mb-2">
+                                <CogIcon className="h-8 w-8 text-slate-500"/>
+                             </div>
+                        )}
+                        {name && <span className="text-white font-bold text-center text-sm">{name}</span>}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+
 // --- Main Component for Parameter Management ---
 export const GestaoParametros: React.FC = () => {
     return (
         <div className="space-y-8">
             <div>
                 <h2 className="text-2xl font-bold text-white mb-2">Gestão de Parâmetros</h2>
-                <p className="text-slate-400">Gerencie os parâmetros de cálculo do frete. Cidades e Tipos de Veículo são derivados dos dados importados/cadastrados.</p>
+                <p className="text-slate-400">Gerencie os parâmetros de cálculo do frete e identidade do sistema.</p>
             </div>
+            
+            <SystemBranding />
+
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 items-start">
                 <GestaoParametrosValores />
                 <GestaoParametrosTaxas />
