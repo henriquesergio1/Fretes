@@ -1,5 +1,5 @@
 
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import { LancamentoFrete } from './components/LancamentoFrete.tsx';
 import { Dashboard } from './components/Dashboard.tsx';
 import { Relatorios } from './components/Relatorios.tsx';
@@ -113,7 +113,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, setView, isCollapsed, set
                 </div>
 
                 <div className={`flex flex-col ${isCollapsed ? 'items-center' : ''}`}>
-                    <p className="text-xs font-mono text-slate-500" title="Versão do Sistema">v1.2.21</p>
+                    <p className="text-xs font-mono text-slate-500" title="Versão do Sistema">v1.2.22</p>
                     <div className={`transition-all duration-300 overflow-hidden ${isCollapsed ? 'h-0 opacity-0' : 'h-auto opacity-100 mt-1'}`}>
                         <p className="text-[10px] text-slate-600 uppercase tracking-wider">Dev</p>
                         <p className="text-xs text-slate-400 font-medium whitespace-nowrap">Sérgio Oliveira</p>
@@ -135,10 +135,16 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, setView, isCollapsed, set
 };
 
 const MainLayout: React.FC = () => {
-    const { loading, error } = useContext(DataContext);
+    const { loading, error, systemConfig } = useContext(DataContext);
     const { user } = useAuth();
     const [activeView, setActiveView] = useState<View>('dashboard');
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+
+    // Atualiza o título da página dinamicamente
+    useEffect(() => {
+        const company = systemConfig.companyName || 'Gestão de Fretes';
+        document.title = `Frete360 | ${company}`;
+    }, [systemConfig.companyName]);
 
     const renderContent = () => {
         // Proteção extra: se tentar acessar admin sem ser admin, volta pro dashboard
