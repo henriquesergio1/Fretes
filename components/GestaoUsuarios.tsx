@@ -4,7 +4,11 @@ import { Usuario } from '../types.ts';
 import * as api from '../services/apiService.ts';
 import { PlusCircleIcon, PencilIcon, CheckCircleIcon, XCircleIcon } from './icons.tsx';
 
-export const GestaoUsuarios: React.FC = () => {
+interface GestaoUsuariosProps {
+    embedded?: boolean;
+}
+
+export const GestaoUsuarios: React.FC<GestaoUsuariosProps> = ({ embedded = false }) => {
     const [usuarios, setUsuarios] = useState<Usuario[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
@@ -64,10 +68,14 @@ export const GestaoUsuarios: React.FC = () => {
     return (
         <div className="space-y-8">
             <div className="flex justify-between items-center">
-                <div>
-                    <h2 className="text-2xl font-bold text-white mb-2">Gestão de Usuários</h2>
-                    <p className="text-slate-400">Cadastre e gerencie o acesso ao sistema.</p>
-                </div>
+                {!embedded && (
+                    <div>
+                        <h2 className="text-2xl font-bold text-white mb-2">Gestão de Usuários</h2>
+                        <p className="text-slate-400">Cadastre e gerencie o acesso ao sistema.</p>
+                    </div>
+                )}
+                {embedded && <div></div> /* Espaçador para manter botão à direita se embedded */}
+                
                 <button onClick={() => handleOpenModal()} className="bg-sky-600 hover:bg-sky-500 text-white font-bold py-2 px-4 rounded-md flex items-center">
                     <PlusCircleIcon className="w-5 h-5 mr-2" /> Novo Usuário
                 </button>
@@ -76,7 +84,7 @@ export const GestaoUsuarios: React.FC = () => {
             {loading && <p className="text-slate-400">Carregando...</p>}
             {error && <p className="text-red-400 bg-red-900/20 p-3 rounded border border-red-500/30">{error}</p>}
 
-            <div className="bg-slate-800 rounded-lg shadow-lg overflow-hidden">
+            <div className="bg-slate-800 rounded-lg shadow-lg overflow-hidden border border-slate-700">
                 <table className="w-full text-sm text-left text-slate-300">
                     <thead className="text-xs text-slate-400 uppercase bg-slate-700">
                         <tr>

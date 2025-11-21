@@ -12,7 +12,7 @@ const options = {
     servers: [
       {
         url: 'http://localhost:3030',
-        description: 'Servidor de Desenvolvimento (Docker)',
+        description: 'Servidor de Produção',
       },
     ],
     components: {

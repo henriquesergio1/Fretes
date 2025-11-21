@@ -7,13 +7,13 @@ import { Importacao } from './components/Importacao.tsx';
 import { GestaoVeiculos } from './components/GestaoVeiculos.tsx';
 import { GestaoParametros } from './components/GestaoParametros.tsx';
 import { GestaoCargas } from './components/GestaoCargas.tsx';
-import { GestaoUsuarios } from './components/GestaoUsuarios.tsx';
+import { AdminPanel } from './components/AdminPanel.tsx';
 import { Login } from './components/Login.tsx';
 import { DataProvider, DataContext } from './context/DataContext.tsx';
 import { AuthProvider, AuthContext, useAuth } from './context/AuthContext.tsx';
-import { ChartBarIcon, CogIcon, PlusCircleIcon, TruckIcon, DocumentReportIcon, CloudUploadIcon, BoxIcon, SpinnerIcon, XCircleIcon, ChevronDoubleLeftIcon, ChevronDoubleRightIcon } from './components/icons.tsx';
+import { ChartBarIcon, CogIcon, PlusCircleIcon, TruckIcon, DocumentReportIcon, CloudUploadIcon, BoxIcon, SpinnerIcon, XCircleIcon, ChevronDoubleLeftIcon, ChevronDoubleRightIcon, Frete360Logo, AdjustmentsIcon } from './components/icons.tsx';
 
-type View = 'dashboard' | 'lancamento' | 'veiculos' | 'cargas' | 'parametros' | 'relatorios' | 'importacao' | 'usuarios';
+type View = 'dashboard' | 'lancamento' | 'veiculos' | 'cargas' | 'parametros' | 'relatorios' | 'importacao' | 'admin';
 
 interface SidebarProps {
     activeView: View;
@@ -33,38 +33,44 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, setView, isCollapsed, set
         { id: 'cargas', label: 'Cargas', icon: BoxIcon },
         { id: 'relatorios', label: 'Relatórios', icon: DocumentReportIcon },
         { id: 'importacao', label: 'Importação', icon: CloudUploadIcon },
-        { id: 'parametros', label: 'Parâmetros', icon: CogIcon },
+        { id: 'parametros', label: 'Parâmetros', icon: AdjustmentsIcon },
     ];
 
-    // Adiciona Gestão de Usuários se for Admin
+    // Adiciona Menu Admin se for Admin
     if (user?.Perfil === 'Admin') {
-        // @ts-ignore (Adicionando item dinâmico)
-        navItems.push({ id: 'usuarios', label: 'Usuários', icon: ({className}) => <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg> });
+        // @ts-ignore
+        navItems.push({ id: 'admin', label: 'Administração', icon: CogIcon });
     }
 
     return (
         <div className={`bg-slate-900 border-r border-slate-800 flex flex-col transition-all duration-300 ${isCollapsed ? 'w-20' : 'w-64'}`}>
-            {/* Dynamic Header */}
-            <div className={`flex flex-col items-center justify-center border-b border-slate-800 transition-all duration-300 py-4 min-h-[5rem] ${isCollapsed ? 'px-2' : 'px-4'}`}>
+            
+            {/* Header Principal do Sistema (Frete360) */}
+            <div className={`flex items-center justify-center py-4 border-b border-slate-800 bg-slate-900 ${isCollapsed ? 'px-1' : 'px-4'}`}>
+                <Frete360Logo className={`text-sky-500 transition-all duration-300 ${isCollapsed ? 'h-8 w-8' : 'h-8 w-8 mr-2'}`} />
+                <h1 className={`text-xl font-extrabold text-white tracking-tight transition-all duration-200 ${isCollapsed ? 'w-0 opacity-0 overflow-hidden' : 'w-auto opacity-100'}`}>
+                    Frete<span className="text-sky-500">360</span>
+                </h1>
+            </div>
+
+            {/* Header da Empresa Cliente (Dinâmico) */}
+            <div className={`flex flex-col items-center justify-center border-b border-slate-800 transition-all duration-300 py-4 min-h-[4rem] bg-slate-800/50 ${isCollapsed ? 'px-2' : 'px-4'}`}>
                 {systemConfig.logoUrl ? (
                     <>
                         <img 
                             src={systemConfig.logoUrl} 
                             alt="Logo" 
-                            className={`object-contain transition-all duration-300 ${isCollapsed ? 'h-8 w-8' : 'h-12 max-w-full'}`} 
+                            className={`object-contain transition-all duration-300 ${isCollapsed ? 'h-6 w-6' : 'h-8 max-w-full'}`} 
                             onError={(e) => { e.currentTarget.style.display = 'none'; }}
                         />
-                         <h1 className={`text-lg font-bold text-white mt-2 text-center transition-all duration-200 ${isCollapsed ? 'opacity-0 h-0 overflow-hidden mt-0' : 'opacity-100'}`}>
-                            {systemConfig.companyName || 'Fretes'}
-                        </h1>
+                         <h2 className={`text-xs font-bold text-slate-300 mt-1 text-center transition-all duration-200 ${isCollapsed ? 'opacity-0 h-0 overflow-hidden mt-0' : 'opacity-100'}`}>
+                            {systemConfig.companyName}
+                        </h2>
                     </>
                 ) : (
-                    <div className="flex items-center justify-center">
-                        <TruckIcon className="h-8 w-8 text-sky-500 shrink-0" />
-                        <h1 className={`text-xl font-bold text-white ml-3 transition-opacity duration-200 ${isCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'}`}>
-                            {systemConfig.companyName || 'Fretes'}
-                        </h1>
-                    </div>
+                    <h2 className={`text-sm font-bold text-slate-300 text-center transition-all duration-200 ${isCollapsed ? 'text-[10px]' : ''}`}>
+                        {systemConfig.companyName || 'Empresa'}
+                    </h2>
                 )}
             </div>
 
@@ -107,7 +113,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, setView, isCollapsed, set
                 </div>
 
                 <div className={`flex flex-col ${isCollapsed ? 'items-center' : ''}`}>
-                    <p className="text-xs font-mono text-slate-500" title="Versão do Sistema">v1.2.16</p>
+                    <p className="text-xs font-mono text-slate-500" title="Versão do Sistema">v1.2.21</p>
                     <div className={`transition-all duration-300 overflow-hidden ${isCollapsed ? 'h-0 opacity-0' : 'h-auto opacity-100 mt-1'}`}>
                         <p className="text-[10px] text-slate-600 uppercase tracking-wider">Dev</p>
                         <p className="text-xs text-slate-400 font-medium whitespace-nowrap">Sérgio Oliveira</p>
@@ -130,10 +136,17 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, setView, isCollapsed, set
 
 const MainLayout: React.FC = () => {
     const { loading, error } = useContext(DataContext);
+    const { user } = useAuth();
     const [activeView, setActiveView] = useState<View>('dashboard');
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
     const renderContent = () => {
+        // Proteção extra: se tentar acessar admin sem ser admin, volta pro dashboard
+        if (activeView === 'admin' && user?.Perfil !== 'Admin') {
+            setActiveView('dashboard');
+            return <Dashboard />;
+        }
+
         switch (activeView) {
             case 'lancamento': return <LancamentoFrete setView={setActiveView} />;
             case 'importacao': return <Importacao />;
@@ -142,7 +155,7 @@ const MainLayout: React.FC = () => {
             case 'cargas': return <GestaoCargas />;
             case 'relatorios': return <Relatorios setView={setActiveView} />;
             case 'parametros': return <GestaoParametros />;
-            case 'usuarios': return <GestaoUsuarios />;
+            case 'admin': return <AdminPanel />;
             default: return <Dashboard />;
         }
     };
