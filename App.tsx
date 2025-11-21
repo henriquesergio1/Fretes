@@ -127,17 +127,10 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, setView, isCollapsed, set
     );
 };
 
-const AuthenticatedApp: React.FC = () => {
+const MainLayout: React.FC = () => {
     const { loading, error } = useContext(DataContext);
-    const { isAuthenticated, loading: authLoading } = useAuth();
     const [activeView, setActiveView] = useState<View>('dashboard');
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-
-    if (authLoading) return <div className="flex h-screen items-center justify-center bg-slate-900 text-white"><SpinnerIcon className="w-10 h-10" /></div>;
-
-    if (!isAuthenticated) {
-        return <Login />;
-    }
 
     const renderContent = () => {
         switch (activeView) {
@@ -189,12 +182,28 @@ const AuthenticatedApp: React.FC = () => {
     );
 };
 
+const AppContent: React.FC = () => {
+    const { isAuthenticated, loading: authLoading } = useAuth();
+
+    if (authLoading) {
+        return <div className="flex h-screen items-center justify-center bg-slate-900 text-white"><SpinnerIcon className="w-10 h-10" /></div>;
+    }
+
+    if (!isAuthenticated) {
+        return <Login />;
+    }
+
+    return (
+        <DataProvider>
+            <MainLayout />
+        </DataProvider>
+    );
+};
+
 const App: React.FC = () => {
     return (
         <AuthProvider>
-            <DataProvider>
-                <AuthenticatedApp />
-            </DataProvider>
+            <AppContent />
         </AuthProvider>
     );
 }
