@@ -3,7 +3,7 @@
 import React, { useState, useMemo, useContext, useEffect } from 'react';
 import { Carga } from '../types.ts';
 import { DataContext } from '../context/DataContext.tsx';
-import { PlusCircleIcon, PencilIcon, XCircleIcon, TrashIcon, ChevronUpIcon, ChevronDownIcon, ExclamationIcon, ArrowLeftIcon, ArrowRightIcon } from './icons.tsx';
+import { PlusCircleIcon, PencilIcon, XCircleIcon, TrashIcon, ChevronUpIcon, ChevronDownIcon, ExclamationIcon, ArrowLeftIcon, ArrowRightIcon, CheckCircleIcon } from './icons.tsx';
 
 // --- Tag Component for Carga Origin ---
 const OrigemTag: React.FC<{ origem?: 'ERP' | 'CSV' | 'Manual' }> = ({ origem }) => {
@@ -241,6 +241,9 @@ export const GestaoCargas: React.FC = () => {
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
     const [showOnlyExcluded, setShowOnlyExcluded] = useState(false);
+    
+    // Novo filtro de Status (Aba)
+    const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'launched'>('all');
 
     // Paginação
     const [currentPage, setCurrentPage] = useState(1);
@@ -267,9 +270,10 @@ export const GestaoCargas: React.FC = () => {
     // Resetar página ao mudar filtros
     useEffect(() => {
         setCurrentPage(1);
-    }, [searchTerm, startDate, endDate, showOnlyExcluded, itemsPerPage]);
+    }, [searchTerm, startDate, endDate, showOnlyExcluded, itemsPerPage, statusFilter]);
 
-    const filteredAndSortedCargas = useMemo(() => {
+    // 1. Primeiro, filtra por critérios básicos (Busca, Data, Excluído)
+    const baseFilteredCargas = useMemo(() => {
         let result = cargas.filter(c => showOnlyExcluded ? c.Excluido : !c.Excluido);
 
         // Filtro de Texto
@@ -295,6 +299,25 @@ export const GestaoCargas: React.FC = () => {
                 return dataCarga <= endDate;
             });
         }
+        return result;
+    }, [cargas, searchTerm, startDate, endDate, showOnlyExcluded]);
+
+    // 2. Calcula contadores com base no filtro inicial
+    const counts = useMemo(() => {
+        const pending = baseFilteredCargas.filter(c => !lancadasIds.has(c.ID_Carga)).length;
+        const launched = baseFilteredCargas.filter(c => lancadasIds.has(c.ID_Carga)).length;
+        return { all: baseFilteredCargas.length, pending, launched };
+    }, [baseFilteredCargas, lancadasIds]);
+
+    // 3. Aplica o filtro de Status e Ordenação
+    const finalCargas = useMemo(() => {
+        let result = baseFilteredCargas;
+
+        if (statusFilter === 'pending') {
+            result = result.filter(c => !lancadasIds.has(c.ID_Carga));
+        } else if (statusFilter === 'launched') {
+            result = result.filter(c => lancadasIds.has(c.ID_Carga));
+        }
 
         // Ordenação
         if (sortConfig !== null) {
@@ -309,15 +332,16 @@ export const GestaoCargas: React.FC = () => {
             });
         }
         return result;
-    }, [cargas, searchTerm, sortConfig, showOnlyExcluded, startDate, endDate]);
+    }, [baseFilteredCargas, statusFilter, lancadasIds, sortConfig]);
+
 
     // Lógica de Paginação
-    const totalItems = filteredAndSortedCargas.length;
+    const totalItems = finalCargas.length;
     const totalPages = Math.ceil(totalItems / itemsPerPage);
     const paginatedCargas = useMemo(() => {
         const startIndex = (currentPage - 1) * itemsPerPage;
-        return filteredAndSortedCargas.slice(startIndex, startIndex + itemsPerPage);
-    }, [filteredAndSortedCargas, currentPage, itemsPerPage]);
+        return finalCargas.slice(startIndex, startIndex + itemsPerPage);
+    }, [finalCargas, currentPage, itemsPerPage]);
 
     const requestSort = (key: keyof Carga) => {
         let direction: 'ascending' | 'descending' = 'ascending';
@@ -477,9 +501,50 @@ export const GestaoCargas: React.FC = () => {
                     </button>
                 </div>
             </div>
+            
+            {/* Abas de Filtro por Status */}
+            <div className="flex space-x-1 border-b border-slate-700">
+                <button
+                    onClick={() => setStatusFilter('all')}
+                    className={`px-6 py-3 text-sm font-medium rounded-t-lg transition-colors flex items-center relative ${
+                        statusFilter === 'all'
+                            ? 'bg-slate-800 text-white border-t border-l border-r border-slate-700 z-10'
+                            : 'bg-slate-800/50 text-slate-400 hover:text-white hover:bg-slate-800'
+                    }`}
+                >
+                    Todos
+                    <span className="ml-2 bg-slate-700 text-slate-300 text-xs px-2 py-0.5 rounded-full">{counts.all}</span>
+                </button>
+                <button
+                    onClick={() => setStatusFilter('pending')}
+                    className={`px-6 py-3 text-sm font-medium rounded-t-lg transition-colors flex items-center relative ${
+                        statusFilter === 'pending'
+                            ? 'bg-slate-800 text-sky-400 border-t border-l border-r border-slate-700 z-10'
+                            : 'bg-slate-800/50 text-slate-400 hover:text-white hover:bg-slate-800'
+                    }`}
+                >
+                    Pendentes
+                    <span className={`ml-2 text-xs px-2 py-0.5 rounded-full ${statusFilter === 'pending' ? 'bg-sky-500/20 text-sky-300' : 'bg-slate-700 text-slate-300'}`}>
+                        {counts.pending}
+                    </span>
+                </button>
+                <button
+                    onClick={() => setStatusFilter('launched')}
+                    className={`px-6 py-3 text-sm font-medium rounded-t-lg transition-colors flex items-center relative ${
+                        statusFilter === 'launched'
+                            ? 'bg-slate-800 text-green-400 border-t border-l border-r border-slate-700 z-10'
+                            : 'bg-slate-800/50 text-slate-400 hover:text-white hover:bg-slate-800'
+                    }`}
+                >
+                    Já Lançadas
+                    <span className={`ml-2 text-xs px-2 py-0.5 rounded-full ${statusFilter === 'launched' ? 'bg-green-500/20 text-green-300' : 'bg-slate-700 text-slate-300'}`}>
+                        {counts.launched}
+                    </span>
+                </button>
+            </div>
 
             {/* Tabela de Dados */}
-            <div className="bg-slate-800 rounded-lg shadow-lg overflow-hidden flex flex-col">
+            <div className="bg-slate-800 rounded-b-lg rounded-tr-lg shadow-lg overflow-hidden flex flex-col border border-t-0 border-slate-700">
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm text-left text-slate-300">
                         <thead className="text-xs text-slate-400 uppercase bg-slate-700">
@@ -612,9 +677,17 @@ export const GestaoCargas: React.FC = () => {
                     </div>
                 </div>
                 
-                 {filteredAndSortedCargas.length === 0 && (
-                    <div className="text-center p-8 text-slate-400 border-t border-slate-700">
-                        Nenhuma carga encontrada. Tente ajustar sua busca ou importe novas cargas.
+                 {finalCargas.length === 0 && (
+                    <div className="text-center p-8 text-slate-400 border-t border-slate-700 flex flex-col items-center justify-center">
+                         <CheckCircleIcon className="w-10 h-10 text-slate-600 mb-3" />
+                         <p className="font-medium">
+                             {statusFilter === 'pending' 
+                                ? "Tudo limpo! Nenhuma carga pendente encontrada." 
+                                : (statusFilter === 'launched' 
+                                    ? "Nenhuma carga lançada encontrada." 
+                                    : "Nenhuma carga encontrada.")}
+                        </p>
+                         <p className="text-sm mt-1">Tente ajustar os filtros de data ou importar novas cargas.</p>
                     </div>
                  )}
             </div>
