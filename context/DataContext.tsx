@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { Veiculo, ParametroValor, ParametroTaxa, Carga, Lancamento, NewLancamento, SystemConfig } from '../types.ts';
 import * as api from '../services/apiService.ts';
@@ -70,8 +69,10 @@ export const DataProvider: React.FC<{children: ReactNode}> = ({ children }) => {
 
     const loadInitialData = useCallback(async () => {
         try {
+            console.log('[DataContext] Iniciando carregamento de dados...');
             setError(null);
             setLoading(true);
+            
             const [veiculosData, pValoresData, pTaxasData, cargasManuaisData, lancamentosData] = await Promise.all([
                 api.getVeiculos(),
                 api.getParametrosValores(),
@@ -79,16 +80,23 @@ export const DataProvider: React.FC<{children: ReactNode}> = ({ children }) => {
                 api.getCargasManuais(),
                 api.getLancamentos(),
             ]);
-            setVeiculos(veiculosData);
-            setParametrosValores(pValoresData);
-            setParametrosTaxas(pTaxasData);
-            setCargas(cargasManuaisData);
-            setLancamentos(lancamentosData);
+
+            // Verificação defensiva e logs
+            if (!veiculosData) console.warn('[DataContext] Veículos vieram vazios/nulos');
+            if (!cargasManuaisData) console.warn('[DataContext] Cargas vieram vazias/nulas');
+
+            setVeiculos(veiculosData || []);
+            setParametrosValores(pValoresData || []);
+            setParametrosTaxas(pTaxasData || []);
+            setCargas(cargasManuaisData || []);
+            setLancamentos(lancamentosData || []);
+            
+            console.log(`[DataContext] Dados carregados. Veiculos: ${veiculosData?.length || 0}, Cargas: ${cargasManuaisData?.length || 0}`);
         } catch (err: any) {
-            console.error("Erro ao carregar dados:", err);
+            console.error("Erro crítico ao carregar dados:", err);
             const errorMessage = process.env.API_MODE === 'api' 
                 ? 'Falha ao conectar com o backend. Verifique se a API está em execução.' 
-                : 'Falha ao carregar dados fictícios.';
+                : 'Falha ao carregar dados. Verifique sua conexão.';
             setError(`${errorMessage} Detalhe: ${err.message}`);
         } finally {
             setLoading(false);
@@ -100,8 +108,6 @@ export const DataProvider: React.FC<{children: ReactNode}> = ({ children }) => {
     }, [loadInitialData]);
 
     useEffect(() => {
-        // Agrega tipos de veículos da frota E dos parâmetros de valores
-        // Isso permite que um tipo exista nos parâmetros mesmo sem veículo, e vice-versa.
         const allTipos = [...new Set([
             ...veiculos.map(v => v.TipoVeiculo),
             ...parametrosValores.map(p => p.TipoVeiculo)
@@ -124,11 +130,11 @@ export const DataProvider: React.FC<{children: ReactNode}> = ({ children }) => {
         }
         try {
             switch (dataType) {
-                case 'veiculos': setVeiculos(await api.getVeiculos()); break;
-                case 'cargas': setCargas(await api.getCargasManuais()); break;
-                case 'parametrosValores': setParametrosValores(await api.getParametrosValores()); break;
-                case 'parametrosTaxas': setParametrosTaxas(await api.getParametrosTaxas()); break;
-                case 'lancamentos': setLancamentos(await api.getLancamentos()); break;
+                case 'veiculos': setVeiculos(await api.getVeiculos() || []); break;
+                case 'cargas': setCargas(await api.getCargasManuais() || []); break;
+                case 'parametrosValores': setParametrosValores(await api.getParametrosValores() || []); break;
+                case 'parametrosTaxas': setParametrosTaxas(await api.getParametrosTaxas() || []); break;
+                case 'lancamentos': setLancamentos(await api.getLancamentos() || []); break;
             }
         } catch (err: any) {
             setError(`Falha ao recarregar dados de ${dataType}: ${err.message}`);
@@ -202,7 +208,6 @@ export const DataProvider: React.FC<{children: ReactNode}> = ({ children }) => {
     };
     const deleteParametroValor = async (id: number, motivo: string) => {
         await api.deleteParametroValor(id, motivo);
-        // Exclusão lógica no estado
         setParametrosValores(prev => prev.filter(p => p.ID_Parametro !== id));
     };
 
@@ -216,7 +221,6 @@ export const DataProvider: React.FC<{children: ReactNode}> = ({ children }) => {
     };
     const deleteParametroTaxa = async (id: number, motivo: string) => {
         await api.deleteParametroTaxa(id, motivo);
-         // Exclusão lógica no estado
         setParametrosTaxas(prev => prev.filter(p => p.ID_Taxa !== id));
     };
 

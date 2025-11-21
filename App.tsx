@@ -183,7 +183,7 @@ const MainLayout: React.FC = () => {
 };
 
 const AppContent: React.FC = () => {
-    const { isAuthenticated, loading: authLoading } = useAuth();
+    const { isAuthenticated, loading: authLoading, user } = useAuth();
 
     if (authLoading) {
         return <div className="flex h-screen items-center justify-center bg-slate-900 text-white"><SpinnerIcon className="w-10 h-10" /></div>;
@@ -194,7 +194,7 @@ const AppContent: React.FC = () => {
     }
 
     return (
-        <DataProvider>
+        <DataProvider key={user?.ID_Usuario}>
             <MainLayout />
         </DataProvider>
     );

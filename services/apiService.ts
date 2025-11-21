@@ -42,7 +42,7 @@ const getToken = () => localStorage.getItem('AUTH_TOKEN');
 
 const handleResponse = async (response: Response) => {
     if (response.status === 401) {
-        // Se não autorizado, limpa dados locais e força recarga para cair no Login
+        console.warn('[API] Sessão expirada (401). Limpando dados e recarregando.');
         localStorage.removeItem('AUTH_TOKEN');
         localStorage.removeItem('AUTH_USER');
         window.location.reload();
@@ -56,7 +56,7 @@ const handleResponse = async (response: Response) => {
         } catch (e) {}
         throw new Error(`Erro na API (${response.status}): ${errorMessage}`);
     }
-    if (response.status === 204) return;
+    if (response.status === 204) return null;
     return response.json();
 };
 
@@ -69,7 +69,6 @@ const apiRequest = async (endpoint: string, method: 'POST' | 'PUT' | 'DELETE', b
     const token = getToken();
     if (token) headers['Authorization'] = `Bearer ${token}`;
 
-    // Adicionado cache: 'no-store' para evitar cache de POST/PUT em alguns navegadores/proxies
     const options: RequestInit = { 
         method, 
         headers, 
@@ -89,14 +88,27 @@ const apiRequest = async (endpoint: string, method: 'POST' | 'PUT' | 'DELETE', b
 const apiGet = async (endpoint: string) => {
     const cleanUrl = API_BASE_URL.replace(/\/$/, '');
     const cleanEndpoint = endpoint.replace(/^\//, '');
-    const url = `${cleanUrl}/${cleanEndpoint}`;
+    
+    // CACHE BUSTING: Adiciona timestamp para forçar o navegador/proxy a buscar dados novos
+    const cacheBuster = `_t=${new Date().getTime()}`;
+    const separator = endpoint.includes('?') ? '&' : '?';
+    const url = `${cleanUrl}/${cleanEndpoint}${separator}${cacheBuster}`;
 
-    const headers: Record<string, string> = {};
+    const headers: Record<string, string> = {
+        'Content-Type': 'application/json', // Explicitamente JSON mesmo para GET
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+    };
+    
     const token = getToken();
-    if (token) headers['Authorization'] = `Bearer ${token}`;
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    } else {
+        console.warn(`[API WARN] Requisição GET sem token para ${url}`);
+    }
 
     try {
-        // CRÍTICO: cache: 'no-store' impede que o navegador use cache antigo (vazio ou 401)
         const response = await fetch(url, { headers, cache: 'no-store' });
         return handleResponse(response);
     } catch (error: any) {
@@ -119,7 +131,7 @@ const RealService = {
     // Dados Básicos
     getVeiculos: (): Promise<Veiculo[]> => apiGet('/veiculos'),
     getCargas: async (params?: { veiculoCod?: string, data?: string }): Promise<Carga[]> => {
-        let cargas: Carga[] = await apiGet('/cargas-manuais');
+        let cargas: Carga[] = await apiGet('/cargas-manuais') || [];
         if (params) {
             if (params.data) {
                 cargas = cargas.filter(c => {
