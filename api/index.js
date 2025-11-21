@@ -9,6 +9,10 @@ const { Connection, Request, TYPES } = require('tedious');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
+// --- Swagger Documentation ---
+const swaggerUi = require('swagger-ui-express');
+const swaggerSpec = require('./swaggerConfig');
+
 // --- Configurações de Segurança ---
 const JWT_SECRET = process.env.JWT_SECRET || 'fretes-secret-key-change-in-prod';
 const SALT_ROUNDS = 10;
@@ -113,6 +117,9 @@ app.use(cors({
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
+// --- ROTA DE DOCUMENTAÇÃO SWAGGER ---
+app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+
 const port = process.env.API_PORT || 3000;
 
 // Inicializa Admin se não existir
@@ -132,7 +139,7 @@ const initAdminUser = async () => {
 initAdminUser();
 
 // --- ROTAS PÚBLICAS ---
-app.get('/', (req, res) => res.send('API Fretes OK'));
+app.get('/', (req, res) => res.send('API Fretes OK. Acesse /docs para documentação.'));
 
 app.post('/login', async (req, res) => {
     const { usuario, senha } = req.body;
